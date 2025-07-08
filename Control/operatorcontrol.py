@@ -12,6 +12,42 @@ except ImportError:
 
 app = Flask(__name__)
 
+# Stylesheet for Terminal Look :3
+RETRO_STYLE_CSS = """
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Share Tech Mono', 'Courier New', monospace;
+      background: #000; color: white; margin: 0; padding: 20px;
+      min-height: 100vh; position: relative; overflow-x: hidden;
+      animation: flicker 0.15s infinite linear, crt-glow 4s ease-in-out infinite alternate;
+    }
+    body::before {
+      content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.04) 2px, rgba(255, 255, 255, 0.04) 4px);
+      pointer-events: none; z-index: 1000;
+    }
+    body::after {
+      content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: radial-gradient(ellipse at center, transparent 0%, transparent 70%, rgba(0,0,0,0.4) 100%);
+      pointer-events: none; z-index: 999; box-shadow: inset 0 0 100px rgba(0,0,0,0.8);
+    }
+    @keyframes flicker { 0% { opacity: 1; } 97% { opacity: 1; } 98% { opacity: 0.97; } 99% { opacity: 0.99; } 100% { opacity: 1; } }
+    @keyframes crt-glow { 0% { text-shadow: 0 0 3px rgba(255,255,255,0.7); } 50% { text-shadow: 0 0 5px rgba(255,255,255,0.8); } 100% { text-shadow: 0 0 3px rgba(255,255,255,0.7); } }
+    .terminal-section { border: 1px solid white; padding: 15px; margin-bottom: 20px; background: rgba(0, 0, 0, 0.8); box-shadow: 0 0 10px rgba(255, 255, 255, 0.2), inset 0 0 10px rgba(255, 255, 255, 0.05); }
+    .section-title { font-size: 1.2em; margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid white; padding-bottom: 5px; text-shadow: 0 0 5px rgba(255,255,255,0.5); }
+    .video-feed { border: 1px solid white; box-shadow: 0 0 20px rgba(255, 255, 255, 0.4); display: block; max-width: 100%; height: auto; }
+    input, button, select, .button { background: #000; border: 1px solid white; color: white; padding: 10px 15px; margin: 5px; font-family: 'Share Tech Mono', monospace; font-size: 1em; text-decoration: none; display: inline-block; }
+    input:focus, button:focus, select:focus { outline: none; box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+    button, .button { cursor: pointer; transition: all 0.2s; text-transform: uppercase; text-align: center; }
+    button:hover, .button:hover { background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 15px rgba(255, 255, 255, 0.4); }
+    .button-group a { margin: 5px; }
+    pre { background: rgba(255, 255, 255, 0.05); border: 1px solid white; padding: 10px; margin-top: 10px; white-space: pre-wrap; word-wrap: break-word; min-height: 50px; }
+    label { display: block; margin: 10px 5px 5px; }
+</style>
+"""
+
 # ==========================
 # Camera Feed
 # ==========================
@@ -58,30 +94,29 @@ def serial_terminal():
         <html>
         <head>
             <title>Serial Terminal</title>
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+            {{ styles|safe }}
         </head>
-        <body class="container mt-5">
-            <h2>Serial Terminal</h2>
-            <form method='POST' class="mb-3">
-                <div class="mb-3">
-                    <label class="form-label">Port:</label>
-                    <select name='port' class="form-select">
+        <body>
+            <div class="terminal-section">
+                <h2 class="section-title">Serial Terminal</h2>
+                <form method='POST'>
+                    <label>Port:</label>
+                    <select name='port'>
                     {% for p in ports %}
                         <option value='{{ p.device }}'>{{ p.device }} - {{ p.description }}</option>
                     {% endfor %}
                     </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Baudrate:</label>
-                    <input type='text' name='baudrate' value='115200' class="form-control">
-                </div>
-                <button type='submit' class="btn btn-primary">Connect</button>
-                <a href='/' class="btn btn-secondary">Back</a>
-            </form>
-            <pre>{{ output }}</pre>
+                    <label>Baudrate:</label>
+                    <input type='text' name='baudrate' value='115200'>
+                    <button type='submit'>Connect</button>
+                    <a href='/' class="button">Back</a>
+                </form>
+                <h3 class="section-title" style="margin-top: 20px;">Output</h3>
+                <pre>{{ output or "Awaiting connection..." }}</pre>
+            </div>
         </body>
         </html>
-    """, ports=ports, output=output)
+    """, ports=ports, output=output, styles=RETRO_STYLE_CSS)
 
 # ==========================
 # Motor Control
@@ -106,16 +141,11 @@ if MOTOR_AVAILABLE:
 def motor_control(action):
     if not MOTOR_AVAILABLE:
         return "Motor control unavailable"
-    if action == 'forward':
-        move(True)
-    elif action == 'backward':
-        move(False)
-    elif action == 'left':
-        turn(False)
-    elif action == 'right':
-        turn(True)
-    elif action == 'stop':
-        stop()
+    if action == 'forward': move(True)
+    elif action == 'backward': move(False)
+    elif action == 'left': turn(False)
+    elif action == 'right': turn(True)
+    elif action == 'stop': stop()
     return redirect(url_for('index'))
 
 # ==========================
@@ -128,34 +158,40 @@ def index():
         <html>
         <head>
             <title>Tengu Vanguard Operator Control</title>
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+            {{ styles|safe }}
         </head>
-        <body class="bg-light">
-            <div class="container py-4">
-                <h1 class="mb-4">Tengu Vanguard Operator Control</h1>
+        <body>
+            <div class="terminal-section">
+                <h1 class="section-title">Tengu Vanguard Operator Control</h1>
+            </div>
 
-                <h3>Camera Feed</h3>
-                <img src="{{ url_for('video_feed') }}" class="img-fluid border" width="640" height="480"><br><br>
+            <div class="terminal-section">
+                <h3 class="section-title">Camera Feed</h3>
+                <img src="{{ url_for('video_feed') }}" class="video-feed" width="640" height="480">
+            </div>
 
-                <h3>Motor Control</h3>
+            <div class="terminal-section">
+                <h3 class="section-title">Motor Control</h3>
                 {% if motor %}
-                    <div class="btn-group mb-4" role="group">
-                        <a href='/motor/forward' class="btn btn-success">Forward</a>
-                        <a href='/motor/backward' class="btn btn-danger">Backward</a>
-                        <a href='/motor/left' class="btn btn-warning">Left</a>
-                        <a href='/motor/right' class="btn btn-warning">Right</a>
-                        <a href='/motor/stop' class="btn btn-secondary">Stop</a>
+                    <div class="button-group">
+                        <a href='/motor/forward' class="button">Forward</a>
+                        <a href='/motor/backward' class="button">Backward</a>
+                        <a href='/motor/left' class="button">Left</a>
+                        <a href='/motor/right' class="button">Right</a>
+                        <a href='/motor/stop' class="button">Stop</a>
                     </div>
                 {% else %}
-                    <p class="text-danger">[!] Motor Hat not detected.</p>
+                    <p>[!] Motor Hat not detected.</p>
                 {% endif %}
+            </div>
 
-                <h3>Serial Tools</h3>
-                <a href='/serial' class="btn btn-info">Open Serial Terminal</a>
+            <div class="terminal-section">
+                <h3 class="section-title">System Tools</h3>
+                <a href='/serial' class="button">Open Serial Terminal</a>
             </div>
         </body>
         </html>
-    """, motor=MOTOR_AVAILABLE)
+    """, motor=MOTOR_AVAILABLE, styles=RETRO_STYLE_CSS)
 
 # ==========================
 # Run App
