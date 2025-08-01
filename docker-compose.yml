@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  tengu_marauder:
+    build: .
+    container_name: tengu_marauder
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    devices:
+      - "/dev/video0:/dev/video0"      # PiCamera
+      - "/dev/ttyUSB0:/dev/ttyUSB0"    # Serial USB (adjust as needed)
+    environment:
+      - FLASK_ENV=production
+    privileged: true                   # Needed for GPIO, udev, or network interfaces
+    volumes:
+      - ./data:/app/data                # Persistent data storage
+      - /etc/localtime:/etc/localtime:ro # Sync host time

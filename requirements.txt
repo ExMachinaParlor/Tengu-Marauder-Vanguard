@@ -1,0 +1,9 @@
+smbus2
+RPi.GPIO
+numpy
+flask
+opencv-python
+pyserial
+Adafruit-Blinka
+requests
+serial
