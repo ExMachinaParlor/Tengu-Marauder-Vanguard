@@ -8,7 +8,7 @@ services:
     ports:
       - "5000:5000"
     devices:
-      - "/dev/video0:/dev/video0"      # PiCamera
+      - "/dev/video0:/dev/video0"      # USB webcam
       - "/dev/ttyUSB0:/dev/ttyUSB0"    # Serial USB (adjust as needed)
     environment:
       - FLASK_ENV=production
