@@ -5,23 +5,29 @@ import serial.tools.list_ports
 import threading
 import os
 
-USE_PICAMERA2 = os.getenv("USE_PICAMERA2", "false").lower() == "true"
+import cv2
 
-if USE_PICAMERA2:
-    try:
-        from picamera2 import Picamera2
-        from libcamera import Transform
-        picam = Picamera2()
-        picam.start()
-        PICAMERA2_AVAILABLE = True
-        print("[INFO] picamera2 is active")
-    except Exception as e:
-        print(f"[WARNING] picamera2 failed to load: {e}")
-        PICAMERA2_AVAILABLE = False
-else:
-    PICAMERA2_AVAILABLE = False
-    print("[INFO] picamera2 disabled")
-# Check if robot_hat library is available for motor control
+def start_camera():
+    cap = cv2.VideoCapture(0)  # Use 0 for the first USB camera
+
+    if not cap.isOpened():
+        print("Cannot open camera")
+        return
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("Can't receive frame (stream end?). Exiting ...")
+            break
+
+        cv2.imshow('Camera Feed', frame)
+
+        if cv2.waitKey(1) == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
 
 try:
     from robot_hat import Motor, PWM, Pin
