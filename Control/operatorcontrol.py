@@ -3,6 +3,25 @@ import cv2
 import serial
 import serial.tools.list_ports
 import threading
+import os
+
+USE_PICAMERA2 = os.getenv("USE_PICAMERA2", "false").lower() == "true"
+
+if USE_PICAMERA2:
+    try:
+        from picamera2 import Picamera2
+        from libcamera import Transform
+        picam = Picamera2()
+        picam.start()
+        PICAMERA2_AVAILABLE = True
+        print("[INFO] picamera2 is active")
+    except Exception as e:
+        print(f"[WARNING] picamera2 failed to load: {e}")
+        PICAMERA2_AVAILABLE = False
+else:
+    PICAMERA2_AVAILABLE = False
+    print("[INFO] picamera2 disabled")
+# Check if robot_hat library is available for motor control
 
 try:
     from robot_hat import Motor, PWM, Pin
@@ -53,25 +72,35 @@ RETRO_STYLE_CSS = """
 # ==========================
 def gen_frames():
     try:
-        cap = cv2.VideoCapture(0)
-        if not cap.isOpened():
-            raise ValueError("Camera not accessible")
-        while True:
-            success, frame = cap.read()
-            if not success:
-                break
-            else:
+        if PICAMERA2_AVAILABLE:
+            while True:
+                frame = picam.capture_array()
                 _, buffer = cv2.imencode('.jpg', frame)
                 frame = buffer.tobytes()
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        else:
+            cap = cv2.VideoCapture(0)
+            if not cap.isOpened():
+                raise ValueError("Camera not accessible")
+            while True:
+                success, frame = cap.read()
+                if not success:
+                    break
+                else:
+                    _, buffer = cv2.imencode('.jpg', frame)
+                    frame = buffer.tobytes()
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
     except Exception as e:
         yield (b'--frame\r\n'
                b'Content-Type: text/plain\r\n\r\nCamera not accessible: ' + str(e).encode() + b'\r\n')
-
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    if PICAMERA2_AVAILABLE:
+        return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    else:
+        return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 # ==========================
 # Serial Port
