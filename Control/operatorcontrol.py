@@ -76,9 +76,6 @@ RETRO_STYLE_CSS = """
 # ==========================
 # Camera Feed
 # ==========================
-# ==========================
-# Camera Feed
-# ==========================
 def gen_frames():
     cap = cv2.VideoCapture(0)
 
