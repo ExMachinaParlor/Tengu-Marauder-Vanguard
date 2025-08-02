@@ -76,37 +76,36 @@ RETRO_STYLE_CSS = """
 # ==========================
 # Camera Feed
 # ==========================
+# ==========================
+# Camera Feed
+# ==========================
 def gen_frames():
+    cap = cv2.VideoCapture(0)
+
+    if not cap.isOpened():
+        yield (b'--frame\r\n'
+               b'Content-Type: text/plain\r\n\r\nCamera not accessible\r\n')
+        return
+
     try:
-        if PICAMERA2_AVAILABLE:
-            while True:
-                frame = picam.capture_array()
-                _, buffer = cv2.imencode('.jpg', frame)
-                frame = buffer.tobytes()
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-        else:
-            cap = cv2.VideoCapture(0)
-            if not cap.isOpened():
-                raise ValueError("Camera not accessible")
-            while True:
-                success, frame = cap.read()
-                if not success:
-                    break
-                else:
-                    _, buffer = cv2.imencode('.jpg', frame)
-                    frame = buffer.tobytes()
-                    yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        while True:
+            success, frame = cap.read()
+            if not success:
+                break
+            _, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
     except Exception as e:
         yield (b'--frame\r\n'
-               b'Content-Type: text/plain\r\n\r\nCamera not accessible: ' + str(e).encode() + b'\r\n')
+               b'Content-Type: text/plain\r\n\r\nCamera error: ' + str(e).encode() + b'\r\n')
+    finally:
+        cap.release()
+
 @app.route('/video_feed')
 def video_feed():
-    if PICAMERA2_AVAILABLE:
-        return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
-    else:
-        return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
 
 # ==========================
 # Serial Port
