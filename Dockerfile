@@ -21,6 +21,8 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     libffi-dev \
     libssl-dev \
+    python3-picamera2 \
+    libcamera-apps \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and set working directory
