@@ -4,7 +4,6 @@ import serial
 import serial.tools.list_ports
 import threading
 import os
-
 import cv2
 
 def start_camera():
