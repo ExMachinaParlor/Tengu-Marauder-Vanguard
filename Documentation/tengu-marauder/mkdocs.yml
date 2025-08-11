@@ -1,1 +1,128 @@
-site_name: My Docs
+site_name: Tengu Marauder Vanguard
+site_description: Offensive/defensive robotics control stack with Wi-Fi tooling and ROS2 integration
+site_url: https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard
+repo_url: https://github.com/ExMachinaParlor/Tengu-Marauder-Vanguard
+repo_name: ExMachinaParlor/Tengu-Marauder-Vanguard
+edit_uri: edit/main/docs/
+copyright: © Ex Machina Parlor
+
+theme:
+  name: material
+  logo: assets/images/logo.png
+  favicon: assets/images/favicon.png
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.action.edit
+    - search.highlight
+    - toc.integrate
+
+nav:
+  - Home: index.md
+  - Quickstart:
+    - Install: quickstart/install.md
+    - First Run: quickstart/first-run.md
+    - Upgrade & Rollback: quickstart/upgrade.md
+  - Architecture:
+    - Overview: architecture/overview.md
+    - Components: architecture/components.md
+    - Data Flow: architecture/dataflow.md
+  - Hardware:
+    - Bill of Materials: hardware/bom.md
+    - Wiring & Pinouts: hardware/wiring.md
+    - Assembly: hardware/assembly.md
+  - Firmware:
+    - ESP32 Firmware: firmware/esp32.md
+    - Optional Modules: firmware/modules.md
+  - Networking:
+    - Secure Wi-Fi + VPN: networking/wifi-vpn.md
+    - Reticulum/RNode: networking/reticulum.md
+    - Hardening Guide: networking/hardening.md
+  - Software:
+    - Services & Env Vars: software/services.md
+    - Web UI: software/webui.md
+    - ROS2 Integration: software/ros2.md
+    - Coding Standards: software/coding-standards.md
+  - API:
+    - REST (HTTP): api/http.md
+    - WebSocket: api/websocket.md
+    - Python API: api/python.md
+  - Modules:
+    - Overview: modules/overview.md
+    - ESP32 Marauder: modules/esp32-marauder.md
+    - Flipper Zero: modules/flipper-zero.md
+    - M5Stick (Bruce): modules/m5stick-bruce.md
+    - HackRF One: modules/hackrf-one.md
+  - Deploy:
+    - Local Dev: deploy/local.md
+    - Docker: deploy/docker.md
+    - Kubernetes: deploy/k8s.md
+    - Air-Gapped Sites: deploy/airgapped.md
+  - Security:
+    - Threat Model: security/threat-model.md
+    - Permissions & RBAC: security/permissions.md
+    - Security Disclosures: security/disclosures.md
+  - Operations:
+    - Troubleshooting: operations/troubleshooting.md
+    - Diagnostics: operations/diagnostics.md
+    - FAQ: operations/faq.md
+  - Community:
+    - Contributing: community/contributing.md
+    - Code of Conduct: community/code-of-conduct.md
+    - Roadmap: community/roadmap.md
+  - Changelog: changelog.md
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.snippets
+  - pymdownx.tabbed
+  - pymdownx.highlight
+  - attr_list
+  - tables
+  - footnotes
+  - md_in_html
+
+plugins:
+  - search
+  - minify
+  - git-revision-date-localized:
+      type: timeago
+  - awesome-pages
+  - mermaid2
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+  - redirects:
+      redirects:
+        # Example: keep old deep links alive
+        "old/reticulum.md": "networking/reticulum.md"
+  - openapi:
+      use_short_codes: true
+
+extra:
+  social:
+    - icon: material/github
+      link: https://github.com/ExMachinaParlor
+    - icon: material/discord
+      link: https://discord.gg/your-invite
+  version:
+    provider: mike
+
+watch:
+  - docs
+  - tmk/         # your Python package(s) for mkdocstrings
+  - web/         # if you generate OpenAPI from Flask here
+
+extra_css:
+  - assets/extra.css
+extra_javascript:
+  - assets/extra.js
