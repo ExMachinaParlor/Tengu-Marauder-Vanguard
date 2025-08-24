@@ -21,10 +21,23 @@ Please remember to make the install file executable with chmod +x install_robot_
 
 ## Getting Started
 
-### Requirements
+### Requirements for Python application
 
 ```bash
-python3 -m pip install -r requirements.txt
+python3 -m venv venv
+source venv/bin/activate
+cd ~/Desktop/Tengu-Marauder-Vanguard
+source venv/bin/activate
+```
+After the venv environment is installed you can then install the python requirements
+
+```bash
+(venv) python3 -m pip install -r requirements.txt
+```
+You can then run the flask app 
+
+```bash
+(venv) python3 Control/operatorcontrol.py
 ```
 
 ### Connect Devices
@@ -38,7 +51,7 @@ python3 operatorcontrol.py
 
 ## Alternative setup option (this is still being tested so this might be pretty unstable)
 
-### Docker Compose
+### Requirements for Docker Compose
 Make sure to install Docker Compose on your Pi
 
 ```bash
