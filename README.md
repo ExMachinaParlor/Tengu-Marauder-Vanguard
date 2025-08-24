@@ -39,6 +39,14 @@ You can then run the flask app
 ```bash
 (venv) python3 Control/operatorcontrol.py
 ```
+If you wanna avoid creating a venv environment or your OS has externally managed python environments like Debian, you can install these onto the apt environment instead
+
+```bash
+sudo apt install python-flask
+```
+```bash
+sudo apt install python-opencv
+````
 
 ### Connect Devices
 Plug in an ESP32 Marauder or other UART-capable device. 
