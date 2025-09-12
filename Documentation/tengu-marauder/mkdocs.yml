@@ -102,25 +102,25 @@ plugins:
             docstring_style: google
             show_source: true
   - redirects:
-      redirects:
+      redirect_maps:
         # Example: keep old deep links alive
         "old/reticulum.md": "networking/reticulum.md"
-  - openapi:
-      use_short_codes: true
+  # - openapi:
+  #    use_short_codes: true
 
 extra:
   social:
     - icon: material/github
       link: https://github.com/ExMachinaParlor
-    - icon: material/discord
+    - icon: simple/discord # requires installing the simple icons package
       link: https://discord.gg/your-invite
   version:
     provider: mike
 
 watch:
   - docs
-  - tmk/         # your Python package(s) for mkdocstrings
-  - web/         # if you generate OpenAPI from Flask here
+  # - tmk/         # your Python package(s) for mkdocstrings
+  # - web/         # if you generate OpenAPI from Flask here
 
 extra_css:
   - assets/extra.css
