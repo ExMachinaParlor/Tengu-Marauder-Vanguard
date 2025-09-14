@@ -2,166 +2,166 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/changelog/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/api/http/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/api/python/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/api/websocket/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/architecture/components/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/architecture/dataflow/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/architecture/overview/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/community/code-of-conduct/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/community/contributing/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/community/roadmap/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/deploy/airgapped/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/deploy/docker/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/deploy/k8s/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/deploy/local/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/firmware/esp32/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/firmware/modules/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/hardware/assembly/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/hardware/bom/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/hardware/wiring/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/modules/esp32-marauder/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/modules/flipper-zero/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/modules/hackrf-one/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/modules/m5stick-bruce/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/modules/overview/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/networking/hardening/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/networking/reticulum/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/networking/wifi-vpn/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/operations/diagnostics/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/operations/faq/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/operations/troubleshooting/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/quickstart/first-run/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/quickstart/install/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/quickstart/upgrade/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/security/disclosures/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/security/permissions/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/security/threat-model/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/software/coding-standards/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/software/ros2/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/software/services/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
     <url>
          <loc>https://exmachinaparlor.github.io/Tengu-Marauder-Vanguard/software/webui/</loc>
-         <lastmod>2025-09-12</lastmod>
+         <lastmod>2025-09-14</lastmod>
     </url>
 </urlset>
