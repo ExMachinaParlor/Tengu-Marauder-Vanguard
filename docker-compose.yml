@@ -1,15 +1,16 @@
 version: "3.8"
 
 services:
-  tengu_marauder:
+  tengu-marauder-vanguard:
     build: .
-    container_name: tengu_marauder
+    container_name: tengu-marauder-
     restart: unless-stopped
     ports:
       - "5000:5000"
     devices:
       - "/dev/video0:/dev/video0"      # USB webcam
       - "/dev/ttyUSB0:/dev/ttyUSB0"    # Serial USB (adjust as needed)
+      - "/dev/i2c-1:/dev/i2c-1"        # Motor hat (0x14)
     environment:
       - FLASK_ENV=production
     privileged: true                   # Needed for GPIO, udev, or network interfaces
