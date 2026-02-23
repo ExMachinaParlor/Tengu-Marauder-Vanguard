@@ -5,6 +5,7 @@ ENV PYTHONUNBUFFERED=1
 
 # Install base system dependencies
 RUN apt-get update && apt-get install -y \
+    i2c-tools \
     libglib2.0-0 \
     libsm6 \
     libxrender1 \
