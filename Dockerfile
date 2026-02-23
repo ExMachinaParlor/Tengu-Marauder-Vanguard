@@ -34,4 +34,4 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 EXPOSE 5000
 
 # Run Flask app
-CMD ["python3", "Control/operatorcontroller.py"]
+CMD ["python3", "Control/operatorcontrol.py"]
