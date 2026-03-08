@@ -17,11 +17,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev \
     libffi-dev \
     libssl-dev \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./
 RUN python -m pip install --upgrade pip setuptools wheel && \
     pip wheel --wheel-dir /wheels -r requirements.txt
+
+# robot_hat is not on PyPI — install from source into the wheels directory
+RUN git clone --depth=1 https://github.com/ExMachinaParlor/robot-hat.git /tmp/robot-hat && \
+    pip wheel --wheel-dir /wheels /tmp/robot-hat && \
+    rm -rf /tmp/robot-hat
 
 
 # ── Stage 2: runtime image ────────────────────────────────────────────────────
