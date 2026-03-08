@@ -10,8 +10,11 @@ services:
     init: true
     restart: unless-stopped
 
-    ports:
-      - "5000:5000"
+    # host network mode gives the container direct access to the Pi's physical
+    # network interfaces — required for arp-scan, iw (wireless), and Bluetooth
+    # AF_BLUETOOTH sockets to work against the real LAN, not the Docker bridge.
+    # Port 5000 is exposed directly on the host (no port mapping needed).
+    network_mode: host
 
     environment:
       FLASK_ENV: production

@@ -203,7 +203,8 @@
 
     .recon-table tr:last-child td { border-bottom: none; }
 
-    .scan-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .scan-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+    .scan-row select { flex: 0 0 auto; min-width: 90px; max-width: 130px; padding: 6px 8px; }
 
     .scan-status {
       font-size: 0.75em;
@@ -299,6 +300,9 @@
         </div>
 
         <div id="drive-status" class="log-line">—</div>
+        <div style="font-size:0.72em;color:var(--dim);margin-top:6px;text-align:center">
+          WASD / arrow keys · space to stop
+        </div>
       </section>
 
     </div><!-- /left col -->
@@ -392,6 +396,9 @@
         <!-- Network scan -->
         <p class="panel-subtitle" style="margin-top:14px">NETWORK HOSTS</p>
         <div class="scan-row">
+          <select id="net-iface-select" title="Network interface">
+            <option value="">auto</option>
+          </select>
           <button onclick="startScan('network')">SCAN LAN</button>
           <span id="network-status" class="scan-status">idle</span>
         </div>
@@ -407,6 +414,9 @@
         <!-- Bluetooth scan -->
         <p class="panel-subtitle" style="margin-top:14px">BLUETOOTH DEVICES</p>
         <div class="scan-row">
+          <select id="bt-adapter-select" title="Bluetooth adapter">
+            <option value="hci0">hci0</option>
+          </select>
           <button onclick="startScan('bluetooth')">SCAN BT</button>
           <span id="bluetooth-status" class="scan-status">idle</span>
         </div>

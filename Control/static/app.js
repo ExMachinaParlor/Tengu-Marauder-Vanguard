@@ -2,6 +2,54 @@
 'use strict';
 
 // ── Drive control ────────────────────────────────────────────────────────────
+// Keyboard: W/↑ forward  S/↓ backward  A/← left  D/→ right  Space stop
+// Keys are ignored when focus is inside a text input or select element.
+
+const _KEY_MAP = {
+  w: 'forward',  ArrowUp:    'forward',
+  s: 'backward', ArrowDown:  'backward',
+  a: 'left',     ArrowLeft:  'left',
+  d: 'right',    ArrowRight: 'right',
+};
+
+let _activeKey = null;
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (e.repeat) return;
+
+  if (e.key === ' ') {
+    e.preventDefault();
+    stopMotors();
+    return;
+  }
+
+  const direction = _KEY_MAP[e.key];
+  if (direction && direction !== _activeKey) {
+    _activeKey = direction;
+    move(direction);
+    _highlightDpad(direction, true);
+  }
+});
+
+document.addEventListener('keyup', e => {
+  const direction = _KEY_MAP[e.key];
+  if (direction && direction === _activeKey) {
+    _activeKey = null;
+    stopMotors();
+    _highlightDpad(direction, false);
+  }
+});
+
+function _highlightDpad(direction, active) {
+  // Find the button whose onclick contains this direction and toggle active style
+  document.querySelectorAll('button[onclick^="move"]').forEach(btn => {
+    if (btn.getAttribute('onclick').includes(`'${direction}'`)) {
+      btn.style.borderColor = active ? 'var(--accent)' : '';
+      btn.style.color = active ? 'var(--accent)' : '';
+    }
+  });
+}
 
 function move(direction) {
   fetch('/api/move', {
@@ -135,14 +183,27 @@ function startScan(type) {
     statusEl.className = 'scan-status scanning';
   }
 
-  fetch(`/api/scan/${type}`, { method: 'POST' })
+  const body = {};
+  if (type === 'network') {
+    const sel = document.getElementById('net-iface-select');
+    if (sel && sel.value) body.interface = sel.value;
+  }
+  if (type === 'bluetooth') {
+    const sel = document.getElementById('bt-adapter-select');
+    if (sel && sel.value) body.adapter = sel.value;
+  }
+
+  fetch(`/api/scan/${type}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
     .then(r => r.json())
     .then(data => {
       if (!data.ok) {
         setScanStatus(type, 'error', data.error);
         return;
       }
-      // Clear any existing poller for this type
       if (_scanPollers[type]) clearInterval(_scanPollers[type]);
       _scanPollers[type] = setInterval(() => pollScan(type), 2000);
     })
@@ -206,10 +267,58 @@ function renderScanResults(type, data) {
   }
 }
 
+// ── Recon — interface / adapter dropdowns ─────────────────────────────────────
+
+function loadNetworkInterfaceOptions() {
+  fetch('/api/interfaces/network')
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) return;
+      const sel = document.getElementById('net-iface-select');
+      if (!sel) return;
+      const current = sel.value;
+      sel.innerHTML = '<option value="">auto</option>';
+      data.interfaces.forEach(iface => {
+        const opt = document.createElement('option');
+        opt.value = iface;
+        opt.textContent = iface;
+        if (iface === current) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    })
+    .catch(() => {});
+}
+
+function loadBtAdapterOptions() {
+  fetch('/api/bluetooth/adapters')
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) return;
+      const sel = document.getElementById('bt-adapter-select');
+      if (!sel) return;
+      const current = sel.value;
+      sel.innerHTML = data.adapters.length
+        ? ''
+        : '<option value="">none detected</option>';
+      data.adapters.forEach(adapter => {
+        const opt = document.createElement('option');
+        opt.value = adapter;
+        opt.textContent = adapter;
+        if (adapter === current || (!current && adapter === 'hci0')) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    })
+    .catch(() => {});
+}
+
 // ── Bootstrap ────────────────────────────────────────────────────────────────
 
 updateStatus();
 loadInterfaces();
-setInterval(updateStatus,       3000);
-setInterval(loadInterfaces,     10000);
-setInterval(updateMarauderLogs, 2000);
+loadNetworkInterfaceOptions();
+loadBtAdapterOptions();
+setInterval(updateStatus,              3000);
+setInterval(loadInterfaces,            10000);
+setInterval(updateMarauderLogs,        2000);
+setInterval(loadNetworkInterfaceOptions, 15000);
+setInterval(loadBtAdapterOptions,        15000);

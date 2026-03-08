@@ -129,9 +129,20 @@ def api_wireless_interfaces():
     })
 
 
+@app.route("/api/interfaces/network")
+def api_network_interfaces():
+    return jsonify({"ok": True, "interfaces": scanner.list_network_interfaces()})
+
+
+@app.route("/api/bluetooth/adapters")
+def api_bt_adapters():
+    return jsonify({"ok": True, "adapters": scanner.list_bt_adapters()})
+
+
 @app.route("/api/scan/network", methods=["POST"])
 def api_scan_network_start():
-    return jsonify(scanner.start_network_scan())
+    data = request.get_json(silent=True) or {}
+    return jsonify(scanner.start_network_scan(interface=data.get("interface", "")))
 
 
 @app.route("/api/scan/network")
@@ -141,7 +152,8 @@ def api_scan_network_results():
 
 @app.route("/api/scan/bluetooth", methods=["POST"])
 def api_scan_bluetooth_start():
-    return jsonify(scanner.start_bluetooth_scan())
+    data = request.get_json(silent=True) or {}
+    return jsonify(scanner.start_bluetooth_scan(adapter=data.get("adapter", "hci0")))
 
 
 @app.route("/api/scan/bluetooth")
