@@ -267,10 +267,19 @@
 
       <!-- Camera -->
       <section class="panel">
-        <h2 class="panel-title">CAMERA FEED</h2>
+        <h2 class="panel-title">
+          CAMERA FEED
+          <span id="cam-tag" class="tag-offline" style="display:none">[OFFLINE]</span>
+        </h2>
         <div class="camera-wrap">
-          <img src="{{ url_for('video_feed') }}" class="camera"
-               width="640" height="480" alt="Camera feed">
+          <img id="cam-img" src="" class="camera" width="640" height="480"
+               alt="Camera feed" style="display:none">
+          <div id="cam-offline" style="
+            display:flex; align-items:center; justify-content:center;
+            height:240px; border:1px solid var(--border);
+            color:var(--dim); font-size:0.85em; letter-spacing:0.1em;">
+            CAMERA OFFLINE
+          </div>
         </div>
       </section>
 

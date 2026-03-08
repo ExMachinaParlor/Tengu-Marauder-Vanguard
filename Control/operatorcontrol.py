@@ -34,7 +34,6 @@ scanner = ScannerService()
 def _gen_frames():
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        yield b"--frame\r\nContent-Type: text/plain\r\n\r\nCamera not accessible\r\n"
         return
     try:
         while True:
@@ -53,8 +52,21 @@ def _gen_frames():
         cap.release()
 
 
+@app.route("/api/camera/status")
+def api_camera_status():
+    cap = cv2.VideoCapture(0)
+    available = cap.isOpened()
+    cap.release()
+    return jsonify({"ok": True, "available": available})
+
+
 @app.route("/video_feed")
 def video_feed():
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        cap.release()
+        return Response("Camera not available", status=503)
+    cap.release()
     return Response(
         _gen_frames(),
         mimetype="multipart/x-mixed-replace; boundary=frame",

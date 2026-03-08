@@ -74,6 +74,32 @@ function setDriveStatus(msg) {
   if (el) el.textContent = msg;
 }
 
+// ── Camera status ─────────────────────────────────────────────────────────────
+
+function checkCamera() {
+  fetch('/api/camera/status')
+    .then(r => r.json())
+    .then(data => {
+      const img     = document.getElementById('cam-img');
+      const offline = document.getElementById('cam-offline');
+      const tag     = document.getElementById('cam-tag');
+      if (!img || !offline) return;
+
+      if (data.available) {
+        if (!img.src || img.src === window.location.href) img.src = '/video_feed';
+        img.style.display = '';
+        offline.style.display = 'none';
+        if (tag) tag.style.display = 'none';
+      } else {
+        img.src = '';
+        img.style.display = 'none';
+        offline.style.display = 'flex';
+        if (tag) tag.style.display = '';
+      }
+    })
+    .catch(() => {});
+}
+
 // ── System status polling ────────────────────────────────────────────────────
 
 function updateStatus() {
@@ -357,11 +383,13 @@ function loadBtAdapterOptions() {
 // ── Bootstrap ────────────────────────────────────────────────────────────────
 
 updateStatus();
+checkCamera();
 loadInterfaces();
 loadNetworkInterfaceOptions();
 loadBtAdapterOptions();
 loadMarauderPorts();
 setInterval(updateStatus,              3000);
+setInterval(checkCamera,               5000);
 setInterval(loadInterfaces,            10000);
 setInterval(updateMarauderLogs,        2000);
 setInterval(loadNetworkInterfaceOptions, 15000);
