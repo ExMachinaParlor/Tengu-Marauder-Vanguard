@@ -90,7 +90,8 @@ for init in glob.glob('/usr/local/lib/python*/site-packages/robot_hat/__init__.p
             output.append('except Exception:')
             for sym in syms:
                 alias = sym.split(' as ')[-1].strip() if ' as ' in sym else sym.strip()
-                output.append(f'    {alias} = None')
+                if alias != '*':  # wildcard imports have no fallback variable
+                    output.append(f'    {alias} = None')
         else:
             output.append(line)
     p.write_text('\n'.join(output) + '\n')
