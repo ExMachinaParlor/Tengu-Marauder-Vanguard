@@ -1,38 +1,84 @@
-FROM python:3.12-slim
+# syntax=docker/dockerfile:1
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# ── Stage 1: build wheels ──────────────────────────────────────────────────────
+FROM python:3.12-slim-bookworm AS builder
 
-# Install base system dependencies
-RUN apt-get update && apt-get install -y \
-    i2c-tools \
-    libglib2.0-0 \
-    libsm6 \
-    libxrender1 \
-    libxext6 \
-    libcap-dev \
-    python3-opencv \
-    udev \
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     gcc \
     g++ \
-    make \
-    build-essential \
     python3-dev \
     libffi-dev \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
-WORKDIR /app
+COPY requirements.txt ./
+RUN python -m pip install --upgrade pip setuptools wheel && \
+    pip wheel --wheel-dir /wheels -r requirements.txt
 
-# Copy files
-COPY . /app
 
-# Install Python packages
-RUN pip install --upgrade pip && pip install -r requirements.txt
+# ── Stage 2: runtime image ────────────────────────────────────────────────────
+FROM python:3.12-slim-bookworm AS runtime
 
-# Expose Flask port
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    APP_HOME=/app \
+    APP_DATA=/app/data
+
+WORKDIR ${APP_HOME}
+
+# Runtime-only system libraries (no compilers)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    i2c-tools \
+    udev \
+    libglib2.0-0 \
+    libsm6 \
+    libxrender1 \
+    libxext6 \
+    tini \
+    iw \
+    rfkill \
+    nmap \
+    arp-scan \
+    bluez \
+    gpsd-clients \
+    rtl-433 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Non-root user with fixed uid/gid
+RUN groupadd --system --gid 10001 app && \
+    useradd --system --uid 10001 --gid 10001 \
+            --create-home --home-dir /home/app app && \
+    mkdir -p ${APP_DATA} && \
+    chown -R app:app ${APP_HOME} /home/app
+
+# Install pre-built wheels from builder stage
+COPY --from=builder /wheels /wheels
+COPY --chown=app:app requirements.txt ./
+RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
+
+# Copy application source after dependencies for better layer caching
+COPY --chown=app:app . ${APP_HOME}
+
+RUN chown -R app:app ${APP_DATA}
+
+USER 10001:10001
+
 EXPOSE 5000
 
-# Run Flask app
-CMD ["python3", "Control/operatorcontrol.py"]
+# Healthcheck against the Flask index route
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD python -c \
+    "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/', timeout=3)"
+
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["python", "Control/operatorcontrol.py"]

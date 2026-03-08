@@ -1,0 +1,51 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Editor / OS artifacts
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs and databases
+*.log
+*.db
+*.sqlite3
+
+# Environment and secrets
+.env
+.venv/
+venv/
+env/
+
+# Build output
+build/
+dist/
+*.egg-info/
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# Docker files themselves (not needed in build context)
+Dockerfile*
+compose*.yaml
+docker-compose*.yml
+
+# Persistent data and media (mounted as volumes at runtime)
+data/
+*.mp4
+*.avi
+*.mov
+*.jpg
+*.jpeg
+*.png
+
+# Docs
+docs/
+*.md

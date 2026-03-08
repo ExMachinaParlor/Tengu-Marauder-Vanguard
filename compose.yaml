@@ -1,0 +1,82 @@
+name: tengu-marauder-vanguard
+
+services:
+  tmv:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: exmachinaparlor/tengu-marauder-vanguard:local
+    container_name: tengu-marauder-vanguard
+    init: true
+    restart: unless-stopped
+
+    ports:
+      - "5000:5000"
+
+    environment:
+      FLASK_ENV: production
+      PYTHONUNBUFFERED: "1"
+
+    # Run as the non-root user defined in the Dockerfile
+    user: "10001:10001"
+
+    # Explicit device mappings — no privileged mode needed.
+    # /dev/rfkill required for rfkill status queries.
+    # /dev/hci0 optional — add only if Bluetooth hardware is present on the Pi.
+    # If a device does not exist on the host, comment it out or Docker will refuse to start.
+    devices:
+      - "/dev/video0:/dev/video0"      # USB webcam
+      - "/dev/ttyUSB0:/dev/ttyUSB0"    # Serial USB — ESP32 Marauder / Bruce
+      - "/dev/i2c-1:/dev/i2c-1"        # Motor hat (0x14)
+      - "/dev/rfkill:/dev/rfkill"       # RF kill switch (wireless enable/disable)
+      # - "/dev/hci0:/dev/hci0"         # Bluetooth — uncomment if BT hardware present
+
+    # Add host device groups so the non-root user can access hardware.
+    # Find correct GIDs on the Pi with: getent group video dialout i2c gpio bluetooth
+    # Override via a .env file if your host differs from these defaults.
+    group_add:
+      - "${VIDEO_GID:-44}"        # video group (camera)
+      - "${DIALOUT_GID:-20}"      # dialout group (serial / ESP32)
+      - "${I2C_GID:-998}"         # i2c group (motor hat)
+      - "${BLUETOOTH_GID:-105}"   # bluetooth group (BT scanning)
+
+    # NET_ADMIN — required for iw (wireless interface info), rfkill, bluetoothctl
+    # NET_RAW   — required for nmap and arp-scan (raw socket operations)
+    # All other capabilities remain dropped.
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
+    security_opt:
+      - no-new-privileges:true
+
+    # Read-only root filesystem; writable paths are explicit below
+    read_only: true
+
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+      - /run:size=16m,noexec,nosuid,nodev
+
+    volumes:
+      - type: bind
+        source: ./data
+        target: /app/data
+      - type: bind
+        source: /etc/localtime
+        target: /etc/localtime
+        read_only: true
+
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/', timeout=3)"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+    stop_grace_period: 15s

@@ -1,0 +1,297 @@
+"""
+Scanner service — passive network and wireless recon via subprocess.
+
+All commands run with hard timeouts and fail gracefully; the web app
+continues working even when specific tools or hardware are absent.
+
+Async scans (network, bluetooth, RF) return immediately with
+status="scanning" and cache results for polling.
+"""
+
+import json
+import logging
+import re
+import subprocess
+import threading
+import time
+
+log = logging.getLogger(__name__)
+
+_SCAN_TIMEOUT = 20  # default subprocess timeout in seconds
+
+
+# ── Subprocess helper ─────────────────────────────────────────────────────────
+
+def _run(cmd: list[str], timeout: int = _SCAN_TIMEOUT) -> tuple[int, str, str]:
+    """Run a subprocess and return (returncode, stdout, stderr)."""
+    try:
+        r = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        return r.returncode, r.stdout, r.stderr
+    except FileNotFoundError:
+        return -1, "", f"Tool not found: {cmd[0]}"
+    except subprocess.TimeoutExpired:
+        return -1, "", f"Timeout after {timeout}s"
+    except Exception as exc:
+        return -1, "", str(exc)
+
+
+# ── Scan result container ─────────────────────────────────────────────────────
+
+class _ScanResult:
+    """Thread-safe container for async scan state."""
+
+    def __init__(self) -> None:
+        self.status = "idle"   # idle | scanning | done | error
+        self.data: list = []
+        self.error = ""
+        self.last_run: float | None = None
+        self._lock = threading.Lock()
+
+    def to_dict(self) -> dict:
+        with self._lock:
+            return {
+                "status": self.status,
+                "data": self.data,
+                "error": self.error,
+                "last_run": self.last_run,
+            }
+
+    def set_scanning(self) -> None:
+        with self._lock:
+            self.status = "scanning"
+            self.error = ""
+
+    def set_done(self, data: list) -> None:
+        with self._lock:
+            self.status = "done"
+            self.data = data
+            self.last_run = time.time()
+
+    def set_error(self, error: str) -> None:
+        with self._lock:
+            self.status = "error"
+            self.error = error
+            self.last_run = time.time()
+
+
+# ── Scanner service ───────────────────────────────────────────────────────────
+
+class ScannerService:
+
+    def __init__(self) -> None:
+        self._network = _ScanResult()
+        self._bluetooth = _ScanResult()
+        self._rf = _ScanResult()
+
+    # ── Wireless interfaces (synchronous, fast) ───────────────────────────────
+
+    def wireless_interfaces(self) -> list[dict]:
+        """Parse `iw dev` output into a list of interface dicts."""
+        rc, out, err = _run(["iw", "dev"], timeout=5)
+        if rc != 0:
+            log.warning("iw dev: %s", err)
+            return []
+
+        interfaces: list[dict] = []
+        current: dict | None = None
+
+        for raw in out.splitlines():
+            line = raw.strip()
+            m = re.match(r"Interface\s+(\S+)", line)
+            if m:
+                if current is not None:
+                    interfaces.append(current)
+                current = {"interface": m.group(1)}
+                continue
+            if current is None:
+                continue
+            for key, pattern in [
+                ("type",    r"type\s+(\S+)"),
+                ("ssid",    r"ssid\s+(.+)"),
+                ("channel", r"channel\s+(\d+)"),
+                ("txpower", r"txpower\s+([\d.]+)"),
+                ("addr",    r"addr\s+([0-9a-f:]{17})"),
+            ]:
+                m2 = re.match(pattern, line)
+                if m2:
+                    current[key] = m2.group(1)
+
+        if current is not None:
+            interfaces.append(current)
+        return interfaces
+
+    # ── RF kill status (synchronous, fast) ────────────────────────────────────
+
+    def rfkill_status(self) -> list[dict]:
+        """Parse `rfkill list` output into a list of device dicts."""
+        rc, out, _ = _run(["rfkill", "list"], timeout=5)
+        if rc != 0:
+            return []
+
+        entries: list[dict] = []
+        current: dict | None = None
+
+        for line in out.splitlines():
+            m = re.match(r"\d+:\s+(.+):", line)
+            if m:
+                if current is not None:
+                    entries.append(current)
+                current = {"name": m.group(1), "soft_block": False, "hard_block": False}
+                continue
+            if current is None:
+                continue
+            if "Soft blocked: yes" in line:
+                current["soft_block"] = True
+            elif "Hard blocked: yes" in line:
+                current["hard_block"] = True
+
+        if current is not None:
+            entries.append(current)
+        return entries
+
+    # ── Network scan (async) ──────────────────────────────────────────────────
+
+    @property
+    def network(self) -> dict:
+        return self._network.to_dict()
+
+    def start_network_scan(self) -> dict:
+        if self._network.status == "scanning":
+            return {"ok": False, "error": "Scan already in progress"}
+        self._network.set_scanning()
+        threading.Thread(target=self._run_network_scan, daemon=True).start()
+        return {"ok": True, "status": "scanning"}
+
+    def _run_network_scan(self) -> None:
+        # arp-scan is faster and more reliable on local LAN
+        rc, out, _ = _run(["arp-scan", "--localnet", "--quiet"], timeout=15)
+        if rc == 0:
+            self._network.set_done(self._parse_arp_scan(out))
+            return
+
+        # Fallback: nmap ping sweep
+        log.info("arp-scan unavailable, falling back to nmap")
+        rc, out, err = _run(
+            ["nmap", "-sn", "-T4", "--host-timeout", "8s", "192.168.0.0/24"],
+            timeout=20,
+        )
+        if rc == 0:
+            self._network.set_done(self._parse_nmap(out))
+        else:
+            self._network.set_error(err.strip() or "Network scan failed")
+
+    @staticmethod
+    def _parse_arp_scan(output: str) -> list[dict]:
+        hosts = []
+        for line in output.splitlines():
+            parts = line.split("\t")
+            if len(parts) >= 2 and re.match(r"\d+\.\d+\.\d+\.\d+", parts[0]):
+                hosts.append({
+                    "ip":     parts[0].strip(),
+                    "mac":    parts[1].strip(),
+                    "vendor": parts[2].strip() if len(parts) > 2 else "",
+                })
+        return hosts
+
+    @staticmethod
+    def _parse_nmap(output: str) -> list[dict]:
+        hosts = []
+        current_ip = ""
+        for line in output.splitlines():
+            m = re.search(r"Nmap scan report for (.+)", line)
+            if m:
+                current_ip = m.group(1).strip()
+            if "Host is up" in line and current_ip:
+                hosts.append({"ip": current_ip, "mac": "", "vendor": ""})
+                current_ip = ""
+        return hosts
+
+    # ── Bluetooth scan (async) ────────────────────────────────────────────────
+
+    @property
+    def bluetooth(self) -> dict:
+        return self._bluetooth.to_dict()
+
+    def start_bluetooth_scan(self) -> dict:
+        if self._bluetooth.status == "scanning":
+            return {"ok": False, "error": "Scan already in progress"}
+        self._bluetooth.set_scanning()
+        threading.Thread(target=self._run_bluetooth_scan, daemon=True).start()
+        return {"ok": True, "status": "scanning"}
+
+    def _run_bluetooth_scan(self) -> None:
+        _run(["bluetoothctl", "scan", "on"], timeout=8)
+        time.sleep(6)
+        _run(["bluetoothctl", "scan", "off"], timeout=5)
+        rc, out, err = _run(["bluetoothctl", "devices"], timeout=5)
+        if rc == 0:
+            self._bluetooth.set_done(self._parse_bt_devices(out))
+        else:
+            self._bluetooth.set_error(err.strip() or "Bluetooth scan failed — /dev/hci0 required")
+
+    @staticmethod
+    def _parse_bt_devices(output: str) -> list[dict]:
+        devices = []
+        for line in output.splitlines():
+            m = re.match(r"Device\s+([0-9A-F:]{17})\s+(.*)", line.strip(), re.IGNORECASE)
+            if m:
+                devices.append({"mac": m.group(1), "name": m.group(2).strip()})
+        return devices
+
+    # ── RF / rtl_433 scan (async) ─────────────────────────────────────────────
+
+    @property
+    def rf(self) -> dict:
+        return self._rf.to_dict()
+
+    def start_rf_scan(self) -> dict:
+        if self._rf.status == "scanning":
+            return {"ok": False, "error": "Scan already in progress"}
+        self._rf.set_scanning()
+        threading.Thread(target=self._run_rf_scan, daemon=True).start()
+        return {"ok": True, "status": "scanning"}
+
+    def _run_rf_scan(self) -> None:
+        rc, out, err = _run(["rtl_433", "-F", "json", "-T", "10"], timeout=15)
+        if rc == 0 or out.strip():
+            signals = []
+            for line in out.splitlines():
+                line = line.strip()
+                if line.startswith("{"):
+                    try:
+                        signals.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        pass
+            self._rf.set_done(signals)
+        else:
+            self._rf.set_error(err.strip() or "RF scan failed — RTL-SDR device required")
+
+    # ── GPS fix (synchronous, fast) ───────────────────────────────────────────
+
+    def gps_fix(self) -> dict | None:
+        """Return a GPS fix from gpsd (TCP port 2947) or None if unavailable."""
+        import socket
+        try:
+            with socket.create_connection(("127.0.0.1", 2947), timeout=2) as s:
+                s.sendall(b'?WATCH={"enable":true,"json":true}\n')
+                s.sendall(b'?POLL;\n')
+                raw = s.recv(4096).decode("utf-8", errors="replace")
+            for line in raw.splitlines():
+                if not line.startswith("{"):
+                    continue
+                obj = json.loads(line)
+                if obj.get("class") == "TPV" and obj.get("mode", 0) >= 2:
+                    return {
+                        "lat":  obj.get("lat"),
+                        "lon":  obj.get("lon"),
+                        "alt":  obj.get("alt"),
+                        "mode": obj.get("mode"),
+                    }
+        except Exception:
+            pass
+        return None
