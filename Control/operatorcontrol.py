@@ -5,6 +5,7 @@ Flask application entry point. All hardware access goes through services;
 this file contains only routing and HTTP concerns.
 """
 
+import glob
 import logging
 
 import cv2
@@ -72,15 +73,13 @@ def _gen_frames():
 
 @app.route("/api/camera/status")
 def api_camera_status():
-    available = _find_camera_index() is not None
+    # Check device existence without opening — avoids conflict with active stream
+    available = bool(glob.glob("/dev/video*"))
     return jsonify({"ok": True, "available": available})
 
 
 @app.route("/video_feed")
 def video_feed():
-    idx = _find_camera_index()
-    if idx is None:
-        return Response("Camera not available", status=503)
     return Response(
         _gen_frames(),
         mimetype="multipart/x-mixed-replace; boundary=frame",
