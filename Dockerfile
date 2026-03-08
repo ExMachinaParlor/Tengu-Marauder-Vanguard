@@ -72,6 +72,31 @@ COPY --from=builder /wheels /wheels
 COPY --chown=app:app requirements.txt ./
 RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
 
+# Patch robot_hat __init__.py to make optional modules (audio, TTS) non-fatal.
+# robot_hat imports pyaudio/TTS at package level; we don't need them for motor control.
+RUN <<EOF python3
+import pathlib, glob
+for init in glob.glob('/usr/local/lib/python*/site-packages/robot_hat/__init__.py'):
+    p = pathlib.Path(init)
+    lines = p.read_text().splitlines()
+    output = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith('from .') and ' import ' in stripped:
+            syms_part = stripped.split(' import ', 1)[1]
+            syms = [s.strip() for s in syms_part.split(',')]
+            output.append('try:')
+            output.append(f'    {stripped}')
+            output.append('except Exception:')
+            for sym in syms:
+                alias = sym.split(' as ')[-1].strip() if ' as ' in sym else sym.strip()
+                output.append(f'    {alias} = None')
+        else:
+            output.append(line)
+    p.write_text('\n'.join(output) + '\n')
+    print(f'Patched {init}')
+EOF
+
 # Copy application source after dependencies for better layer caching
 COPY --chown=app:app . ${APP_HOME}
 

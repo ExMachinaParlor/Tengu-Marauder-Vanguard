@@ -10,7 +10,11 @@ import logging
 log = logging.getLogger(__name__)
 
 try:
-    from robot_hat import Motor, PWM, Pin  # type: ignore
+    # Import directly from submodules to avoid robot_hat/__init__.py pulling in
+    # optional modules (music, pyaudio, pygame) that are not needed for drive control.
+    from robot_hat.motor import Motor  # type: ignore
+    from robot_hat.pwm import PWM      # type: ignore
+    from robot_hat.pin import Pin      # type: ignore
     AVAILABLE = True
     log.info("robot_hat loaded — hardware is available")
 except ImportError:
