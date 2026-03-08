@@ -48,7 +48,8 @@ declare -A DEVICE_LABELS=(
   ["/dev/ttyUSB0"]="Serial USB (ESP32 Marauder / Bruce)"
   ["/dev/ttyACM0"]="Serial ACM (Flipper Zero / alternate)"
   ["/dev/i2c-1"]="I2C bus 1 (motor hat PWM)"
-  ["/dev/gpiomem"]="GPIO memory (motor direction pins)"
+  ["/dev/gpiomem"]="GPIO memory (motor direction pins, RPi.GPIO)"
+  ["/dev/gpiochip0"]="GPIO character device (motor direction pins, lgpio)"
   ["/dev/rfkill"]="RF kill switch"
 )
 
