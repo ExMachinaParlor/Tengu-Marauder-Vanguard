@@ -33,12 +33,21 @@ docker compose version
 
 > Docker Compose v2 is included with the modern Docker install as `docker compose` (space, no hyphen). Do not install the old `docker-compose` package from apt.
 
-### 2. Clone and run
+### 2. Set up host permissions (run once)
+
+The container runs as a non-root user. Hardware access (motors, GPIO, camera, serial) requires your Pi user to be in the correct OS groups. Run the setup script once to configure groups, udev rules, and generate the `.env` file automatically:
 
 ```bash
 git clone https://github.com/ExMachinaParlor/Tengu-Marauder-Vanguard.git
 cd Tengu-Marauder-Vanguard
-docker compose build
+sudo bash Install/install_host_permissions.sh
+```
+
+Then **log out and back in** (or reboot) for group membership to take effect. This is required — group changes don't apply to your current shell session.
+
+### 3. Build and run
+
+```bash
 chmod +x tmv-start.sh
 ./tmv-start.sh
 ```
@@ -49,29 +58,13 @@ Find your Pi's IP with: `hostname -I`
 
 #### Why `tmv-start.sh` instead of `docker compose up`?
 
-Docker refuses to start if any device listed in `compose.yaml` doesn't exist on the host (e.g. camera not plugged in, ESP32 not connected). `tmv-start.sh` detects which devices are actually present and only maps those, so the container starts cleanly regardless of what hardware is connected at that moment.
+Docker refuses to start if any device listed in `compose.yaml` doesn't exist on the host (e.g. camera not plugged in, ESP32 not connected). `tmv-start.sh` detects which devices are actually present and only maps those, so the container starts cleanly regardless of what hardware is connected at that moment. If a device disappears between detection and Docker startup (race condition), the script automatically retries without it.
 
 ```bash
 ./tmv-start.sh            # start (detached)
 ./tmv-start.sh --logs     # start and follow logs
 ./tmv-start.sh --stop     # stop the container
 ./tmv-start.sh --rebuild  # rebuild image then start
-```
-
-### Device group IDs (Pi only)
-
-The container runs as a non-root user. If hardware access fails, find the correct GIDs on your Pi and create a `.env` file:
-
-```bash
-getent group video dialout i2c bluetooth
-```
-
-```ini
-# .env
-VIDEO_GID=44
-DIALOUT_GID=20
-I2C_GID=998
-BLUETOOTH_GID=105
 ```
 
 ### Optional: Bluetooth hardware

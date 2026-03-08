@@ -48,7 +48,8 @@ declare -A DEVICE_LABELS=(
   ["/dev/video0"]="USB webcam"
   ["/dev/ttyUSB0"]="Serial USB (ESP32 Marauder / Bruce)"
   ["/dev/ttyACM0"]="Serial ACM (Flipper Zero / alternate)"
-  ["/dev/i2c-1"]="I2C bus 1 (motor hat)"
+  ["/dev/i2c-1"]="I2C bus 1 (motor hat PWM)"
+  ["/dev/gpiomem"]="GPIO memory (motor direction pins)"
   ["/dev/rfkill"]="RF kill switch"
   ["/dev/hci0"]="Bluetooth HCI"
 )

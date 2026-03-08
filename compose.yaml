@@ -31,7 +31,8 @@ services:
     group_add:
       - "${VIDEO_GID:-44}"        # video group (camera)
       - "${DIALOUT_GID:-20}"      # dialout group (serial / ESP32)
-      - "${I2C_GID:-998}"         # i2c group (motor hat)
+      - "${I2C_GID:-998}"         # i2c group (motor hat — PCA9685 PWM over I2C)
+      - "${GPIO_GID:-997}"        # gpio group (motor direction pins via gpiomem)
       - "${BLUETOOTH_GID:-105}"   # bluetooth group (BT scanning)
 
     # NET_ADMIN — required for iw (wireless interface info), rfkill, bluetoothctl
