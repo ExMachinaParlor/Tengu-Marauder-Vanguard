@@ -31,8 +31,23 @@ scanner = ScannerService()
 
 # ── Camera ───────────────────────────────────────────────────────────────────
 
+def _find_camera_index() -> int | None:
+    """Return the index of the first V4L2 camera that can actually be read."""
+    for idx in range(4):
+        cap = cv2.VideoCapture(idx)
+        opened = cap.isOpened()
+        cap.release()
+        if opened:
+            log.info("Camera found at index %d", idx)
+            return idx
+    return None
+
+
 def _gen_frames():
-    cap = cv2.VideoCapture(0)
+    idx = _find_camera_index()
+    if idx is None:
+        return
+    cap = cv2.VideoCapture(idx)
     if not cap.isOpened():
         return
     try:
@@ -54,19 +69,15 @@ def _gen_frames():
 
 @app.route("/api/camera/status")
 def api_camera_status():
-    cap = cv2.VideoCapture(0)
-    available = cap.isOpened()
-    cap.release()
+    available = _find_camera_index() is not None
     return jsonify({"ok": True, "available": available})
 
 
 @app.route("/video_feed")
 def video_feed():
-    cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
-        cap.release()
+    idx = _find_camera_index()
+    if idx is None:
         return Response("Camera not available", status=503)
-    cap.release()
     return Response(
         _gen_frames(),
         mimetype="multipart/x-mixed-replace; boundary=frame",

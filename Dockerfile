@@ -88,10 +88,14 @@ for init in glob.glob('/usr/local/lib/python*/site-packages/robot_hat/__init__.p
             output.append('try:')
             output.append(f'    {stripped}')
             output.append('except Exception:')
+            added = False
             for sym in syms:
                 alias = sym.split(' as ')[-1].strip() if ' as ' in sym else sym.strip()
                 if alias != '*':  # wildcard imports have no fallback variable
                     output.append(f'    {alias} = None')
+                    added = True
+            if not added:
+                output.append('    pass')  # wildcard-only: except needs a body
         else:
             output.append(line)
     p.write_text('\n'.join(output) + '\n')
