@@ -67,9 +67,11 @@ services:
         source: /etc/localtime
         target: /etc/localtime
         read_only: true
-      # robot_hat reads /proc/device-tree to detect Raspberry Pi hardware
+      # robot_hat reads /proc/device-tree to detect Raspberry Pi hardware.
+      # /proc/device-tree is a symlink to /sys/firmware/devicetree/base on Pi;
+      # sysfs sub-paths can be bind-mounted into containers, procfs paths cannot.
       - type: bind
-        source: /proc/device-tree
+        source: /sys/firmware/devicetree/base
         target: /proc/device-tree
         read_only: true
 

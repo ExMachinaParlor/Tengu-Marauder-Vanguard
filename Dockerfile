@@ -98,7 +98,13 @@ for init in glob.glob('/usr/local/lib/python*/site-packages/robot_hat/__init__.p
                 output.append('    pass')  # wildcard-only: except needs a body
         else:
             output.append(line)
-    p.write_text('\n'.join(output) + '\n')
+    txt = '\n'.join(output) + '\n'
+    # Also wrap the Devices() instantiation which reads /proc/device-tree at runtime
+    txt = txt.replace(
+        '__device__ = Devices()',
+        'try:\n    __device__ = Devices()\nexcept Exception:\n    __device__ = None'
+    )
+    p.write_text(txt)
     print(f'Patched {init}')
 EOF
 
