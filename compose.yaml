@@ -67,6 +67,11 @@ services:
         source: /etc/localtime
         target: /etc/localtime
         read_only: true
+      # robot_hat reads /proc/device-tree to detect Raspberry Pi hardware
+      - type: bind
+        source: /proc/device-tree
+        target: /proc/device-tree
+        read_only: true
 
     healthcheck:
       test:

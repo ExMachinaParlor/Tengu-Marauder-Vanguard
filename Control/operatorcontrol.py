@@ -32,14 +32,17 @@ scanner = ScannerService()
 # ── Camera ───────────────────────────────────────────────────────────────────
 
 def _find_camera_index() -> int | None:
-    """Return the index of the first V4L2 camera that can actually be read."""
+    """Return the index of the first V4L2 camera that can actually produce frames."""
     for idx in range(4):
         cap = cv2.VideoCapture(idx)
-        opened = cap.isOpened()
-        cap.release()
-        if opened:
-            log.info("Camera found at index %d", idx)
-            return idx
+        if cap.isOpened():
+            ok, _ = cap.read()
+            cap.release()
+            if ok:
+                log.info("Camera found at index %d", idx)
+                return idx
+        else:
+            cap.release()
     return None
 
 
