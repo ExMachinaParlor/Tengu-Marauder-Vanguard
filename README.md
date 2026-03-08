@@ -39,12 +39,24 @@ docker compose version
 git clone https://github.com/ExMachinaParlor/Tengu-Marauder-Vanguard.git
 cd Tengu-Marauder-Vanguard
 docker compose build
-docker compose up -d
+chmod +x tmv-start.sh
+./tmv-start.sh
 ```
 
 Open `http://<pi-ip>:5000` in a browser on the same network.
 
 Find your Pi's IP with: `hostname -I`
+
+#### Why `tmv-start.sh` instead of `docker compose up`?
+
+Docker refuses to start if any device listed in `compose.yaml` doesn't exist on the host (e.g. camera not plugged in, ESP32 not connected). `tmv-start.sh` detects which devices are actually present and only maps those, so the container starts cleanly regardless of what hardware is connected at that moment.
+
+```bash
+./tmv-start.sh            # start (detached)
+./tmv-start.sh --logs     # start and follow logs
+./tmv-start.sh --stop     # stop the container
+./tmv-start.sh --rebuild  # rebuild image then start
+```
 
 ### Device group IDs (Pi only)
 

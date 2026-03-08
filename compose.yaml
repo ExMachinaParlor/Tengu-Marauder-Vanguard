@@ -20,16 +20,10 @@ services:
     # Run as the non-root user defined in the Dockerfile
     user: "10001:10001"
 
-    # Explicit device mappings — no privileged mode needed.
-    # /dev/rfkill required for rfkill status queries.
-    # /dev/hci0 optional — add only if Bluetooth hardware is present on the Pi.
-    # If a device does not exist on the host, comment it out or Docker will refuse to start.
-    devices:
-      - "/dev/video0:/dev/video0"      # USB webcam
-      - "/dev/ttyUSB0:/dev/ttyUSB0"    # Serial USB — ESP32 Marauder / Bruce
-      - "/dev/i2c-1:/dev/i2c-1"        # Motor hat (0x14)
-      - "/dev/rfkill:/dev/rfkill"       # RF kill switch (wireless enable/disable)
-      # - "/dev/hci0:/dev/hci0"         # Bluetooth — uncomment if BT hardware present
+    # Device mappings are injected at runtime by tmv-start.sh, which checks
+    # which devices are actually present before starting the container.
+    # Running `docker compose up` directly works but maps no hardware.
+    # Use ./tmv-start.sh for full hardware access.
 
     # Add host device groups so the non-root user can access hardware.
     # Find correct GIDs on the Pi with: getent group video dialout i2c gpio bluetooth
