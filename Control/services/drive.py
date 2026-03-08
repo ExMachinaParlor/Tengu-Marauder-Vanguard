@@ -35,8 +35,11 @@ class DriveService:
 
         if AVAILABLE:
             try:
-                self._motor_right = Motor(PWM("P12"), Pin("D4"))
-                self._motor_left = Motor(PWM("P13"), Pin("D5"))
+                # mode=1 (TC1508S): PWM pin controls speed, GPIO pin controls direction.
+                # Passed explicitly so Motor() doesn't call Devices() to auto-detect,
+                # which reads /proc/device-tree/ — unavailable inside Docker containers.
+                self._motor_right = Motor(PWM("P12"), Pin("D4"), mode=1)
+                self._motor_left = Motor(PWM("P13"), Pin("D5"), mode=1)
                 self._available = True
                 log.info("Drive service online")
             except Exception as exc:
