@@ -40,7 +40,8 @@ class DriveService:
                 self._available = True
                 log.info("Drive service online")
             except Exception as exc:
-                log.warning("Drive service init failed: %s", exc)
+                log.warning("Drive service init failed (%s: %s) — check /dev/i2c-1 and group membership",
+                            type(exc).__name__, exc)
         else:
             log.warning("Drive service offline — robot_hat not available")
 

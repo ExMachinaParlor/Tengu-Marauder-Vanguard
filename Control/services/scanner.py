@@ -8,6 +8,7 @@ Async scans (network, bluetooth, RF) return immediately with
 status="scanning" and cache results for polling.
 """
 
+import ipaddress
 import json
 import logging
 import re
@@ -167,18 +168,35 @@ class ScannerService:
         threading.Thread(target=self._run_network_scan, daemon=True).start()
         return {"ok": True, "status": "scanning"}
 
+    @staticmethod
+    def _local_subnet() -> str:
+        """Detect the local subnet from the routing table (e.g. '192.168.1.0/24')."""
+        rc, out, _ = _run(["ip", "-o", "-f", "inet", "addr", "show"], timeout=5)
+        if rc == 0:
+            for line in out.splitlines():
+                parts = line.split()
+                try:
+                    idx = parts.index("inet")
+                    addr = parts[idx + 1]  # e.g. "192.168.1.100/24"
+                    if not addr.startswith("127."):
+                        return str(ipaddress.ip_interface(addr).network)
+                except (ValueError, IndexError):
+                    continue
+        return "192.168.1.0/24"
+
     def _run_network_scan(self) -> None:
         # arp-scan is faster and more reliable on local LAN
-        rc, out, _ = _run(["arp-scan", "--localnet", "--quiet"], timeout=15)
+        rc, out, _ = _run(["arp-scan", "--localnet", "--quiet"], timeout=20)
         if rc == 0:
             self._network.set_done(self._parse_arp_scan(out))
             return
 
-        # Fallback: nmap ping sweep
-        log.info("arp-scan unavailable, falling back to nmap")
+        # Fallback: nmap ping sweep on the detected local subnet
+        subnet = self._local_subnet()
+        log.info("arp-scan unavailable, falling back to nmap on %s", subnet)
         rc, out, err = _run(
-            ["nmap", "-sn", "-T4", "--host-timeout", "8s", "192.168.0.0/24"],
-            timeout=20,
+            ["nmap", "-sn", "-T4", "--host-timeout", "5s", subnet],
+            timeout=30,
         )
         if rc == 0:
             self._network.set_done(self._parse_nmap(out))
@@ -225,22 +243,28 @@ class ScannerService:
         return {"ok": True, "status": "scanning"}
 
     def _run_bluetooth_scan(self) -> None:
-        _run(["bluetoothctl", "scan", "on"], timeout=8)
-        time.sleep(6)
-        _run(["bluetoothctl", "scan", "off"], timeout=5)
-        rc, out, err = _run(["bluetoothctl", "devices"], timeout=5)
+        # hcitool talks directly to the HCI socket — no D-Bus daemon required.
+        # Classic inquiry scan: --length 6 ≈ 7.7 s (each unit is 1.28 s).
+        rc, out, err = _run(
+            ["hcitool", "scan", "--length", "6", "--flush"],
+            timeout=15,
+        )
         if rc == 0:
-            self._bluetooth.set_done(self._parse_bt_devices(out))
+            self._bluetooth.set_done(self._parse_hcitool_scan(out))
         else:
-            self._bluetooth.set_error(err.strip() or "Bluetooth scan failed — /dev/hci0 required")
+            self._bluetooth.set_error(
+                err.strip() or "Bluetooth scan failed — /dev/hci0 required"
+            )
 
     @staticmethod
-    def _parse_bt_devices(output: str) -> list[dict]:
+    def _parse_hcitool_scan(output: str) -> list[dict]:
+        """Parse `hcitool scan` output: tab-separated MAC and name per line."""
         devices = []
         for line in output.splitlines():
-            m = re.match(r"Device\s+([0-9A-F:]{17})\s+(.*)", line.strip(), re.IGNORECASE)
+            line = line.strip()
+            m = re.match(r"([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5})\s+(.*)", line)
             if m:
-                devices.append({"mac": m.group(1), "name": m.group(2).strip()})
+                devices.append({"mac": m.group(1).upper(), "name": m.group(2).strip() or "unknown"})
         return devices
 
     # ── RF / rtl_433 scan (async) ─────────────────────────────────────────────

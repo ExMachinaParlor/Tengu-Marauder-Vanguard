@@ -18,4 +18,11 @@ except ImportError:
     PWM = None
     Pin = None
     AVAILABLE = False
-    log.warning("robot_hat not found — hardware features disabled")
+    log.warning("robot_hat not installed — hardware features disabled")
+except Exception as exc:
+    Motor = None
+    PWM = None
+    Pin = None
+    AVAILABLE = False
+    log.warning("robot_hat import failed (%s: %s) — hardware features disabled",
+                type(exc).__name__, exc)
