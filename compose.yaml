@@ -20,8 +20,10 @@ services:
       FLASK_ENV: production
       PYTHONUNBUFFERED: "1"
 
-    # Run as the non-root user defined in the Dockerfile
-    user: "10001:10001"
+    # Run as root so all hardware devices (I2C, GPIO, serial, BT) are accessible
+    # without per-group permission tuning. Acceptable on a dedicated security Pi.
+    # To revert to non-root, change to: user: "10001:10001"
+    user: "0:0"
 
     # Device mappings are injected at runtime by tmv-start.sh, which checks
     # which devices are actually present before starting the container.
@@ -36,7 +38,7 @@ services:
       - "${DIALOUT_GID:-20}"      # dialout group (serial / ESP32)
       - "${I2C_GID:-998}"         # i2c group (motor hat — PCA9685 PWM over I2C)
       - "${GPIO_GID:-997}"        # gpio group (motor direction pins via gpiomem)
-      - "${BLUETOOTH_GID:-105}"   # bluetooth group (BT scanning)
+      - "${BLUETOOTH_GID:-105}"   # bluetooth group (BT scanning — all /dev/hci* adapters)
 
     # NET_ADMIN — required for iw (wireless interface info), rfkill, bluetoothctl
     # NET_RAW   — required for nmap and arp-scan (raw socket operations)

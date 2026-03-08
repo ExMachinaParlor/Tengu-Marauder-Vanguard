@@ -356,6 +356,13 @@
           {% endif %}
         </h2>
 
+        <div class="cmd-row" style="margin-bottom:6px">
+          <select id="marauder-port" title="Serial port" onchange="switchMarauderPort()">
+            <option value="">no device</option>
+          </select>
+          <span id="port-status" style="font-size:0.75em;color:var(--dim)">—</span>
+        </div>
+
         <div class="cmd-row">
           <select id="marauder-cmd">
             <option value="scanap">SCAN APs</option>

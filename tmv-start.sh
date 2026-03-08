@@ -42,8 +42,7 @@ case "${1:-}" in
 esac
 
 # ── Device detection ───────────────────────────────────────────────────────────
-# List of candidate devices to check. Docker will refuse to start if any
-# mapped device doesn't exist on the host, so we only map what's present.
+# Fixed candidate devices to check:
 declare -A DEVICE_LABELS=(
   ["/dev/video0"]="USB webcam"
   ["/dev/ttyUSB0"]="Serial USB (ESP32 Marauder / Bruce)"
@@ -51,7 +50,6 @@ declare -A DEVICE_LABELS=(
   ["/dev/i2c-1"]="I2C bus 1 (motor hat PWM)"
   ["/dev/gpiomem"]="GPIO memory (motor direction pins)"
   ["/dev/rfkill"]="RF kill switch"
-  ["/dev/hci0"]="Bluetooth HCI"
 )
 
 # ── Write override from a device list ─────────────────────────────────────────
@@ -80,10 +78,22 @@ EOF
 scan_devices() {
   local -n _result=$1
   _result=()
+
+  # Fixed candidates
   for dev in "${!DEVICE_LABELS[@]}"; do
     if [ -e "$dev" ]; then
       _result+=("$dev")
     fi
+  done
+
+  # Dynamic: all /dev/hci* Bluetooth adapters (hci0, hci1, …)
+  for dev in /dev/hci*; do
+    [ -e "$dev" ] && _result+=("$dev")
+  done
+
+  # Dynamic: all /dev/video* cameras beyond video0
+  for dev in /dev/video[1-9]; do
+    [ -e "$dev" ] && _result+=("$dev")
   done
 }
 
@@ -92,12 +102,21 @@ echo "[*] Detecting hardware devices..."
 declare -a FOUND_DEVICES
 scan_devices FOUND_DEVICES
 
+# Print fixed candidates
 for dev in "${!DEVICE_LABELS[@]}"; do
   if [[ " ${FOUND_DEVICES[*]} " == *" $dev "* ]]; then
     echo "  [+] $dev — ${DEVICE_LABELS[$dev]}"
   else
     echo "  [~] $dev — not present (${DEVICE_LABELS[$dev]})"
   fi
+done
+
+# Print dynamically found hci/video devices
+for dev in "${FOUND_DEVICES[@]}"; do
+  case "$dev" in
+    /dev/hci*)   echo "  [+] $dev — Bluetooth HCI adapter" ;;
+    /dev/video[1-9]) echo "  [+] $dev — additional USB camera" ;;
+  esac
 done
 
 echo

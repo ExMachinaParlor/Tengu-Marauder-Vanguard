@@ -106,6 +106,20 @@ def api_marauder_logs():
     return jsonify({"ok": True, "logs": marauder.logs()})
 
 
+@app.route("/api/marauder/ports")
+def api_marauder_ports():
+    return jsonify({"ok": True, "ports": marauder.list_ports(), "active": marauder.port})
+
+
+@app.route("/api/marauder/port", methods=["POST"])
+def api_marauder_port():
+    data = request.get_json(silent=True) or {}
+    port = data.get("port", "").strip()
+    if not port:
+        return jsonify({"ok": False, "error": "No port specified"}), 400
+    return jsonify(marauder.reconnect(port))
+
+
 # ── Status API ───────────────────────────────────────────────────────────────
 
 @app.route("/api/status")

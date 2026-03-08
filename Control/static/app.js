@@ -112,6 +112,49 @@ function setStatusValue(id, value) {
 
 // ── Marauder console ─────────────────────────────────────────────────────────
 
+function loadMarauderPorts() {
+  fetch('/api/marauder/ports')
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) return;
+      const sel = document.getElementById('marauder-port');
+      if (!sel) return;
+      sel.innerHTML = data.ports.length
+        ? ''
+        : '<option value="">no device</option>';
+      data.ports.forEach(port => {
+        const opt = document.createElement('option');
+        opt.value = port;
+        opt.textContent = port;
+        if (port === data.active) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      const ps = document.getElementById('port-status');
+      if (ps) ps.textContent = data.active && data.ports.includes(data.active)
+        ? 'connected'
+        : data.ports.length ? 'select port' : 'no device';
+    })
+    .catch(() => {});
+}
+
+function switchMarauderPort() {
+  const sel = document.getElementById('marauder-port');
+  const port = sel ? sel.value : '';
+  if (!port) return;
+  const ps = document.getElementById('port-status');
+  if (ps) ps.textContent = 'connecting...';
+  fetch('/api/marauder/port', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ port }),
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (ps) ps.textContent = data.ok ? 'connected' : `failed: ${data.error || ''}`;
+    })
+    .catch(e => { if (ps) ps.textContent = `error: ${e.message}`; });
+}
+
 function sendMarauder() {
   const select = document.getElementById('marauder-cmd');
   const cmd = select ? select.value : '';
@@ -317,8 +360,10 @@ updateStatus();
 loadInterfaces();
 loadNetworkInterfaceOptions();
 loadBtAdapterOptions();
+loadMarauderPorts();
 setInterval(updateStatus,              3000);
 setInterval(loadInterfaces,            10000);
 setInterval(updateMarauderLogs,        2000);
 setInterval(loadNetworkInterfaceOptions, 15000);
 setInterval(loadBtAdapterOptions,        15000);
+setInterval(loadMarauderPorts,           10000);

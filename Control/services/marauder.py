@@ -6,6 +6,7 @@ streams output into a ring buffer, and enforces a command whitelist so
 only known-safe commands can be sent from the web UI.
 """
 
+import glob
 import logging
 import threading
 
@@ -72,6 +73,30 @@ class MarauderService:
 
     def logs(self) -> list[str]:
         return self._logs.lines()
+
+    @property
+    def port(self) -> str:
+        return self._port
+
+    def reconnect(self, port: str) -> dict:
+        """Close current connection and reopen on a new port."""
+        with self._lock:
+            self._connected = False
+            if self._ser and self._ser.is_open:
+                try:
+                    self._ser.close()
+                except Exception:
+                    pass
+            self._ser = None
+            self._port = port
+        self._try_connect()
+        return {"ok": self._connected, "port": self._port}
+
+    @staticmethod
+    def list_ports() -> list[str]:
+        """Return all USB serial device paths present on the host."""
+        ports = glob.glob("/dev/ttyUSB*") + glob.glob("/dev/ttyACM*")
+        return sorted(ports)
 
     # ── Internal ────────────────────────────────────────────────────────────
 
