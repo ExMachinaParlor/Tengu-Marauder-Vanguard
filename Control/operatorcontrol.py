@@ -48,17 +48,22 @@ def _find_camera_index() -> int | None:
 
 
 def _gen_frames():
+    import time
     idx = _find_camera_index()
     if idx is None:
         return
     cap = cv2.VideoCapture(idx)
     if not cap.isOpened():
         return
+    # Discard warm-up frames so the first delivered frame isn't black
+    for _ in range(10):
+        cap.read()
     try:
         while True:
             ok, frame = cap.read()
             if not ok:
-                break
+                time.sleep(0.05)
+                continue
             _, buf = cv2.imencode(".jpg", frame)
             yield (
                 b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"
