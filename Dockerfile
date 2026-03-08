@@ -123,4 +123,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/', timeout=3)"
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["python", "Control/operatorcontrol.py"]
+# Start from /tmp so lgpio can create its notification pipe files there.
+# Flask resolves templates/static relative to the script's __file__, not CWD.
+CMD ["bash", "-c", "cd /tmp && exec python /app/Control/operatorcontrol.py"]
