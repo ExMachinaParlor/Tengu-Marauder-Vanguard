@@ -12,14 +12,39 @@ A mobile cyber-physical platform combining robot drive control, live camera, ESP
 
 ## Quick Start (Docker — recommended)
 
+### 1. Install Docker on the Pi
+
+```bash
+# Official Docker install script — handles arm64/armhf automatically
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Add your user to the docker group (avoids sudo on every command)
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Enable Docker on boot
+sudo systemctl enable docker
+
+# Verify — both should return version strings
+docker --version
+docker compose version
+```
+
+> Docker Compose v2 is included with the modern Docker install as `docker compose` (space, no hyphen). Do not install the old `docker-compose` package from apt.
+
+### 2. Clone and run
+
 ```bash
 git clone https://github.com/ExMachinaParlor/Tengu-Marauder-Vanguard.git
 cd Tengu-Marauder-Vanguard
 docker compose build
-docker compose up
+docker compose up -d
 ```
 
 Open `http://<pi-ip>:5000` in a browser on the same network.
+
+Find your Pi's IP with: `hostname -I`
 
 ### Device group IDs (Pi only)
 
