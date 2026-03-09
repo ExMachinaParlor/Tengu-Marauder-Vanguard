@@ -241,7 +241,7 @@ def api_portscan_start():
     target = data.get("target", "").strip()
     if not target:
         return jsonify({"ok": False, "error": "No target specified"}), 400
-    return jsonify(scanner.start_port_scan(target=target, ports=data.get("ports", "")))
+    return jsonify(scanner.start_port_scan(target=target, flags=data.get("flags", "")))
 
 
 @app.route("/api/scan/portscan")

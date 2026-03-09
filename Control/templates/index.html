@@ -573,26 +573,24 @@
 
           <!-- Port scan -->
           <p class="panel-subtitle">PORT SCAN (NMAP)</p>
-          <div class="scan-row" style="flex-wrap:wrap;gap:4px">
-            <input id="scan-target" type="text" placeholder="IP or range (e.g. 10.0.0.1/24)"
-                   style="flex:1;min-width:160px;background:var(--bg);color:var(--fg);
+          <div class="scan-row" style="flex-wrap:wrap;gap:4px;align-items:center">
+            <span style="font-size:0.85em;color:var(--dim)">nmap</span>
+            <input id="scan-target" type="text" placeholder="target (IP, range, CIDR)"
+                   style="flex:1;min-width:140px;background:var(--bg);color:var(--fg);
                           border:1px solid var(--border);padding:6px 8px;
                           font-family:inherit;font-size:0.85em;">
-            <input id="scan-ports" type="text" placeholder="ports (blank=top 100)"
-                   style="width:140px;background:var(--bg);color:var(--fg);
+            <input id="scan-flags" type="text" placeholder="flags (e.g. -sV -p 22,80,443)"
+                   style="flex:1;min-width:160px;background:var(--bg);color:var(--fg);
                           border:1px solid var(--border);padding:6px 8px;
                           font-family:inherit;font-size:0.85em;">
             <button onclick="startScan('portscan')">SCAN</button>
             <span id="portscan-status" class="scan-status">idle</span>
           </div>
-          <table class="recon-table" style="margin-top:6px">
-            <thead>
-              <tr><th>IP</th><th>PORT</th><th>PROTO</th><th>SERVICE</th></tr>
-            </thead>
-            <tbody id="portscan-body">
-              <tr><td colspan="4" style="color:var(--dim)">—</td></tr>
-            </tbody>
-          </table>
+          <pre id="portscan-output"
+               style="margin-top:6px;padding:8px;background:var(--bg);
+                      border:1px solid var(--border);color:var(--fg);
+                      font-size:0.8em;max-height:320px;overflow-y:auto;
+                      white-space:pre-wrap;word-break:break-all">—</pre>
         </div>
 
       </section>

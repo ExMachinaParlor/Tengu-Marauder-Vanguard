@@ -421,50 +421,25 @@ class ScannerService:
     def portscan(self) -> dict:
         return self._portscan.to_dict()
 
-    def start_port_scan(self, target: str, ports: str = "") -> dict:
+    def start_port_scan(self, target: str, flags: str = "") -> dict:
         if not re.match(r"^[\w.\-:/]+$", target):
             return {"ok": False, "error": "Invalid target"}
         if self._portscan.status == "scanning":
             return {"ok": False, "error": "Scan already in progress"}
         self._portscan.set_scanning()
-        threading.Thread(target=self._run_port_scan, args=(target, ports), daemon=True).start()
+        threading.Thread(target=self._run_port_scan, args=(target, flags), daemon=True).start()
         return {"ok": True, "status": "scanning"}
 
-    def _run_port_scan(self, target: str, ports: str) -> None:
-        cmd = ["nmap", "-T4", "--open", "-oG", "-"]
-        if ports:
-            cmd += ["-p", ports]
-        else:
-            cmd += ["-F"]  # top 100 ports
-        cmd.append(target)
-        rc, out, err = _run(cmd, timeout=60)
-        if rc != 0:
-            self._portscan.set_error(err.strip() or "Port scan failed")
+    def _run_port_scan(self, target: str, flags: str) -> None:
+        # Parse flags string into a safe argument list (allow nmap flag chars only)
+        flag_args = [f for f in flags.split() if re.match(r"^[\w.\-:/,]+$", f)]
+        cmd = ["nmap"] + flag_args + [target]
+        rc, out, err = _run(cmd, timeout=120)
+        combined = out + (("\n" + err) if err.strip() else "")
+        if not combined.strip():
+            self._portscan.set_error("No output — check target and flags")
             return
-        self._portscan.set_done(self._parse_nmap_grepable(out))
-
-    @staticmethod
-    def _parse_nmap_grepable(output: str) -> list[dict]:
-        results = []
-        for line in output.splitlines():
-            if not line.startswith("Host:"):
-                continue
-            parts = {}
-            for segment in line.split("\t"):
-                if ": " in segment:
-                    k, v = segment.split(": ", 1)
-                    parts[k.strip()] = v.strip()
-            ip_m = re.match(r"(\S+)", parts.get("Host", ""))
-            ip = ip_m.group(1) if ip_m else ""
-            ports = []
-            for p in parts.get("Ports", "").split(", "):
-                fields = p.split("/")
-                if len(fields) >= 5 and fields[1] == "open":
-                    ports.append({"port": fields[0], "proto": fields[2],
-                                  "service": fields[4] or "unknown"})
-            if ip and ports:
-                results.append({"ip": ip, "ports": ports})
-        return results
+        self._portscan.set_done([{"output": combined.strip()}])
 
     # ── DNS lookup (synchronous) ──────────────────────────────────────────────
 

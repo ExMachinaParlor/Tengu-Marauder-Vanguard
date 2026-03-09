@@ -274,10 +274,10 @@ function startScan(type) {
   }
   if (type === 'portscan') {
     const target = (document.getElementById('scan-target') || {}).value?.trim();
-    const ports  = (document.getElementById('scan-ports')  || {}).value?.trim();
+    const flags  = (document.getElementById('scan-flags')  || {}).value?.trim();
     if (!target) { setScanStatus('portscan', 'error', 'no target'); return; }
     body.target = target;
-    if (ports) body.ports = ports;
+    if (flags) body.flags = flags;
   }
 
   fetch(`/api/scan/${type}`, {
@@ -354,17 +354,9 @@ function renderScanResults(type, data) {
   }
 
   if (type === 'portscan') {
-    const tbody = document.getElementById('portscan-body');
-    if (!tbody) return;
-    if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="4" style="color:var(--dim)">no open ports found</td></tr>';
-      return;
-    }
-    tbody.innerHTML = data.flatMap(host =>
-      host.ports.map(p =>
-        `<tr><td>${host.ip}</td><td>${p.port}</td><td>${p.proto}</td><td>${p.service}</td></tr>`
-      )
-    ).join('');
+    const pre = document.getElementById('portscan-output');
+    if (!pre) return;
+    pre.textContent = data.length && data[0].output ? data[0].output : 'no output';
   }
 
   if (type === 'wifi') {
