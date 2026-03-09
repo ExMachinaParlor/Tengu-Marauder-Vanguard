@@ -268,6 +268,10 @@ function startScan(type) {
     const sel = document.getElementById('bt-adapter-select');
     if (sel && sel.value) body.adapter = sel.value;
   }
+  if (type === 'wifi') {
+    const sel = document.getElementById('wifi-iface-select');
+    if (sel && sel.value) body.interface = sel.value;
+  }
 
   fetch(`/api/scan/${type}`, {
     method: 'POST',
@@ -341,9 +345,69 @@ function renderScanResults(type, data) {
       ? data.map(s => JSON.stringify(s, null, 2)).join('\n---\n')
       : 'no signals decoded';
   }
+
+  if (type === 'wifi') {
+    const tbody = document.getElementById('wifi-body');
+    if (!tbody) return;
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--dim)">no APs found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(ap =>
+      `<tr>
+        <td>${ap.ssid || '<hidden>'}</td>
+        <td style="font-size:0.8em">${ap.bssid}</td>
+        <td>${ap.channel || '—'}</td>
+        <td>${ap.signal || '—'}</td>
+        <td>${ap.encryption}</td>
+      </tr>`
+    ).join('');
+  }
+}
+
+// ── Ping test ─────────────────────────────────────────────────────────────────
+
+function runPing() {
+  const host = (document.getElementById('ping-host') || {}).value?.trim();
+  if (!host) return;
+  const el = document.getElementById('ping-status');
+  if (el) { el.textContent = 'pinging...'; el.className = 'scan-status scanning'; }
+  fetch('/api/ping', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ host }),
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (el) {
+        el.textContent = data.ok ? `${data.latency}` : `unreachable`;
+        el.className = `scan-status ${data.ok ? 'done' : 'error'}`;
+      }
+    })
+    .catch(e => { if (el) { el.textContent = `error: ${e.message}`; el.className = 'scan-status error'; } });
 }
 
 // ── Recon — interface / adapter dropdowns ─────────────────────────────────────
+
+function loadWifiInterfaceOptions() {
+  fetch('/api/wireless/interfaces')
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) return;
+      const sel = document.getElementById('wifi-iface-select');
+      if (!sel) return;
+      const current = sel.value;
+      sel.innerHTML = '';
+      data.interfaces.forEach(i => {
+        const opt = document.createElement('option');
+        opt.value = i.interface;
+        opt.textContent = i.interface;
+        if (i.interface === current || i.interface === 'wlan0') opt.selected = true;
+        sel.appendChild(opt);
+      });
+    })
+    .catch(() => {});
+}
 
 function loadNetworkInterfaceOptions() {
   fetch('/api/interfaces/network')
@@ -392,6 +456,7 @@ function loadBtAdapterOptions() {
 updateStatus();
 checkCamera();
 loadInterfaces();
+loadWifiInterfaceOptions();
 loadNetworkInterfaceOptions();
 loadBtAdapterOptions();
 loadMarauderPorts();

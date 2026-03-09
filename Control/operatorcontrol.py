@@ -215,6 +215,26 @@ def api_scan_rf_results():
     return jsonify({"ok": True, **scanner.rf})
 
 
+@app.route("/api/scan/wifi", methods=["POST"])
+def api_scan_wifi_start():
+    data = request.get_json(silent=True) or {}
+    return jsonify(scanner.start_wifi_scan(interface=data.get("interface", "wlan0")))
+
+
+@app.route("/api/scan/wifi")
+def api_scan_wifi_results():
+    return jsonify({"ok": True, **scanner.wifi})
+
+
+@app.route("/api/ping", methods=["POST"])
+def api_ping():
+    data = request.get_json(silent=True) or {}
+    host = data.get("host", "").strip()
+    if not host:
+        return jsonify({"ok": False, "error": "No host specified"}), 400
+    return jsonify(scanner.ping(host))
+
+
 # ── UI ───────────────────────────────────────────────────────────────────────
 
 @app.route("/")

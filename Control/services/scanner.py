@@ -88,6 +88,7 @@ class ScannerService:
         self._network = _ScanResult()
         self._bluetooth = _ScanResult()
         self._rf = _ScanResult()
+        self._wifi = _ScanResult()
 
     # ── Wireless interfaces (synchronous, fast) ───────────────────────────────
 
@@ -363,6 +364,68 @@ class ScannerService:
             self._rf.set_done(signals)
         else:
             self._rf.set_error(err.strip() or "RF scan failed — RTL-SDR device required")
+
+    # ── WiFi AP scan (async) ──────────────────────────────────────────────────
+
+    @property
+    def wifi(self) -> dict:
+        return self._wifi.to_dict()
+
+    def start_wifi_scan(self, interface: str = "wlan0") -> dict:
+        if self._wifi.status == "scanning":
+            return {"ok": False, "error": "Scan already in progress"}
+        self._wifi.set_scanning()
+        threading.Thread(target=self._run_wifi_scan, args=(interface,), daemon=True).start()
+        return {"ok": True, "status": "scanning"}
+
+    def _run_wifi_scan(self, interface: str) -> None:
+        rc, out, err = _run(["iw", "dev", interface, "scan"], timeout=15)
+        if rc != 0:
+            self._wifi.set_error(err.strip() or f"WiFi scan failed on {interface}")
+            return
+        self._wifi.set_done(self._parse_iw_scan(out))
+
+    @staticmethod
+    def _parse_iw_scan(output: str) -> list[dict]:
+        aps: list[dict] = []
+        current: dict | None = None
+        for line in output.splitlines():
+            line = line.strip()
+            m = re.match(r"BSS ([0-9a-f:]{17})", line)
+            if m:
+                if current is not None:
+                    aps.append(current)
+                current = {"bssid": m.group(1).upper(), "ssid": "", "channel": "",
+                           "signal": "", "encryption": "open"}
+                continue
+            if current is None:
+                continue
+            if line.startswith("SSID:"):
+                current["ssid"] = line.split(":", 1)[1].strip()
+            elif line.startswith("DS Parameter set: channel"):
+                current["channel"] = line.split("channel")[1].strip()
+            elif line.startswith("signal:"):
+                current["signal"] = line.split(":", 1)[1].strip()
+            elif "RSN:" in line or "WPA:" in line:
+                current["encryption"] = "WPA2" if "RSN" in line else "WPA"
+            elif "Privacy" in line and current["encryption"] == "open":
+                current["encryption"] = "WEP"
+        if current is not None:
+            aps.append(current)
+        return aps
+
+    # ── Ping test (synchronous) ───────────────────────────────────────────────
+
+    def ping(self, host: str) -> dict:
+        """Ping a host once and return latency or error."""
+        if not re.match(r"^[\w.\-:]+$", host):
+            return {"ok": False, "error": "Invalid host"}
+        rc, out, err = _run(["ping", "-c", "3", "-W", "2", host], timeout=10)
+        if rc == 0:
+            m = re.search(r"rtt .* = [\d.]+/([\d.]+)/", out)
+            latency = f"{m.group(1)} ms" if m else "ok"
+            return {"ok": True, "host": host, "latency": latency}
+        return {"ok": False, "host": host, "error": "unreachable"}
 
     # ── GPS fix (synchronous, fast) ───────────────────────────────────────────
 

@@ -457,6 +457,35 @@
           </table>
         </div>
 
+        <!-- WiFi AP scan -->
+        <p class="panel-subtitle" style="margin-top:14px">WIFI ACCESS POINTS</p>
+        <div class="scan-row">
+          <select id="wifi-iface-select" title="Wireless interface">
+            <option value="wlan0">wlan0</option>
+          </select>
+          <button onclick="startScan('wifi')">SCAN APs</button>
+          <span id="wifi-status" class="scan-status">idle</span>
+        </div>
+        <table class="recon-table">
+          <thead>
+            <tr><th>SSID</th><th>BSSID</th><th>CH</th><th>SIGNAL</th><th>ENC</th></tr>
+          </thead>
+          <tbody id="wifi-body">
+            <tr><td colspan="5" style="color:var(--dim)">—</td></tr>
+          </tbody>
+        </table>
+
+        <!-- Ping test -->
+        <p class="panel-subtitle" style="margin-top:14px">PING TEST</p>
+        <div class="scan-row">
+          <input id="ping-host" type="text" placeholder="host or IP"
+                 style="flex:1;background:var(--bg);color:var(--fg);
+                        border:1px solid var(--border);padding:6px 8px;
+                        font-family:inherit;font-size:0.85em;">
+          <button onclick="runPing()">PING</button>
+          <span id="ping-status" class="scan-status">—</span>
+        </div>
+
         <!-- Network scan -->
         <p class="panel-subtitle" style="margin-top:14px">NETWORK HOSTS</p>
         <div class="scan-row">
