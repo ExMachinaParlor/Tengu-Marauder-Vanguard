@@ -19,14 +19,28 @@ log = logging.getLogger(__name__)
 # Commands the web UI is allowed to send. Extend as needed.
 ALLOWED_COMMANDS: frozenset[str] = frozenset(
     {
-        "scanap",
-        "scansta",
-        "stopscan",
-        "list",
-        "clearap",
-        "clearsta",
-        "info",
-        "reboot",
+        # System
+        "help", "info", "reboot", "clear", "led", "settings",
+        # WiFi scanning
+        "scanap", "scansta", "scanprobe", "stopscan",
+        # Packet sniffing
+        "sniffbeacon", "sniffdeauth", "sniffprobe", "sniffraw",
+        # Attacks & targeting
+        "attack", "select",
+        # Bluetooth
+        "blescan", "blejam", "blebeacon",
+        # Evil portal
+        "evilportal",
+        # Channel
+        "setchannel",
+        # File system
+        "ls", "cat", "rm", "save", "load",
+        # List / clear
+        "list", "clearap", "clearsta",
+        # Capture
+        "capture", "stopcap", "savecap", "handshake", "pwnagotchi",
+        # Debug
+        "log", "heap", "tasks",
     }
 )
 

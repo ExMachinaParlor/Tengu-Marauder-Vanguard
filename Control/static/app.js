@@ -187,8 +187,11 @@ function switchMarauderPort() {
 
 function sendMarauder() {
   const select = document.getElementById('marauder-cmd');
-  const cmd = select ? select.value : '';
-  if (!cmd) return;
+  const argsEl = document.getElementById('marauder-args');
+  const base = select ? select.value : '';
+  if (!base) return;
+  const args = argsEl ? argsEl.value.trim() : '';
+  const cmd = args ? `${base} ${args}` : base;
 
   fetch('/api/marauder', {
     method: 'POST',

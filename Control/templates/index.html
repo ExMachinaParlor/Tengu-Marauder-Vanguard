@@ -374,15 +374,60 @@
 
         <div class="cmd-row">
           <select id="marauder-cmd">
-            <option value="scanap">SCAN APs</option>
-            <option value="scansta">SCAN STATIONS</option>
-            <option value="stopscan">STOP SCAN</option>
-            <option value="list">LIST</option>
-            <option value="clearap">CLEAR APs</option>
-            <option value="clearsta">CLEAR STATIONS</option>
-            <option value="info">INFO</option>
-            <option value="reboot">REBOOT DEVICE</option>
+            <optgroup label="── WiFi SCAN ──">
+              <option value="scanap">SCAN APs</option>
+              <option value="scansta">SCAN STATIONS</option>
+              <option value="scanprobe">SCAN PROBES</option>
+              <option value="stopscan">STOP SCAN</option>
+            </optgroup>
+            <optgroup label="── SNIFF ──">
+              <option value="sniffbeacon">SNIFF BEACONS</option>
+              <option value="sniffdeauth">SNIFF DEAUTH</option>
+              <option value="sniffprobe">SNIFF PROBES</option>
+              <option value="sniffraw">SNIFF RAW</option>
+            </optgroup>
+            <optgroup label="── ATTACK ──">
+              <option value="attack -t deauth">DEAUTH ATTACK</option>
+              <option value="attack -t beacon">BEACON SPAM</option>
+              <option value="attack -t probe">PROBE SPAM</option>
+              <option value="attack -s">STOP ATTACK</option>
+            </optgroup>
+            <optgroup label="── BLUETOOTH ──">
+              <option value="blescan">BLE SCAN</option>
+              <option value="blejam">BLE JAM</option>
+              <option value="blebeacon">BLE BEACON</option>
+            </optgroup>
+            <optgroup label="── EVIL PORTAL ──">
+              <option value="evilportal start">EVIL PORTAL START</option>
+              <option value="evilportal stop">EVIL PORTAL STOP</option>
+            </optgroup>
+            <optgroup label="── CAPTURE ──">
+              <option value="capture">START CAPTURE</option>
+              <option value="stopcap">STOP CAPTURE</option>
+              <option value="savecap">SAVE CAPTURE</option>
+              <option value="handshake">HANDSHAKE CAPTURE</option>
+            </optgroup>
+            <optgroup label="── MANAGE ──">
+              <option value="list">LIST</option>
+              <option value="clearap">CLEAR APs</option>
+              <option value="clearsta">CLEAR STATIONS</option>
+              <option value="ls">LIST FILES</option>
+              <option value="setchannel">SET CHANNEL</option>
+            </optgroup>
+            <optgroup label="── SYSTEM ──">
+              <option value="info">INFO</option>
+              <option value="help">HELP</option>
+              <option value="settings">SETTINGS</option>
+              <option value="heap">HEAP</option>
+              <option value="tasks">TASKS</option>
+              <option value="reboot">REBOOT DEVICE</option>
+            </optgroup>
           </select>
+          <input id="marauder-args" type="text" placeholder="args"
+                 style="width:70px;background:var(--bg);color:var(--fg);
+                        border:1px solid var(--border);padding:6px 8px;
+                        font-family:inherit;font-size:0.85em;"
+                 title="Optional arguments (e.g. AP index for 'select -a', channel for 'setchannel')">
           <button onclick="sendMarauder()">SEND</button>
         </div>
 
