@@ -272,6 +272,13 @@ function startScan(type) {
     const sel = document.getElementById('wifi-iface-select');
     if (sel && sel.value) body.interface = sel.value;
   }
+  if (type === 'portscan') {
+    const target = (document.getElementById('scan-target') || {}).value?.trim();
+    const ports  = (document.getElementById('scan-ports')  || {}).value?.trim();
+    if (!target) { setScanStatus('portscan', 'error', 'no target'); return; }
+    body.target = target;
+    if (ports) body.ports = ports;
+  }
 
   fetch(`/api/scan/${type}`, {
     method: 'POST',
@@ -346,6 +353,20 @@ function renderScanResults(type, data) {
       : 'no signals decoded';
   }
 
+  if (type === 'portscan') {
+    const tbody = document.getElementById('portscan-body');
+    if (!tbody) return;
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="color:var(--dim)">no open ports found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.flatMap(host =>
+      host.ports.map(p =>
+        `<tr><td>${host.ip}</td><td>${p.port}</td><td>${p.proto}</td><td>${p.service}</td></tr>`
+      )
+    ).join('');
+  }
+
   if (type === 'wifi') {
     const tbody = document.getElementById('wifi-body');
     if (!tbody) return;
@@ -366,6 +387,31 @@ function renderScanResults(type, data) {
 }
 
 // ── Ping test ─────────────────────────────────────────────────────────────────
+
+function runDns() {
+  const host = (document.getElementById('dns-host') || {}).value?.trim();
+  if (!host) return;
+  const el = document.getElementById('dns-result');
+  if (el) { el.textContent = 'resolving...'; el.className = 'scan-status scanning'; }
+  fetch('/api/dns', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ host }),
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (el) {
+        el.textContent = data.ok ? data.results.join(', ') : `error: ${data.error}`;
+        el.className = `scan-status ${data.ok ? 'done' : 'error'}`;
+      }
+    })
+    .catch(e => { if (el) { el.textContent = `error: ${e.message}`; el.className = 'scan-status error'; } });
+}
+
+function unlockActiveRecon() {
+  document.getElementById('active-locked').style.display = 'none';
+  document.getElementById('active-unlocked').style.display = '';
+}
 
 function runPing() {
   const host = (document.getElementById('ping-host') || {}).value?.trim();

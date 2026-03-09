@@ -530,6 +530,71 @@
         </div>
         <pre id="rf-results" class="log-box" style="height:120px">—</pre>
 
+        <!-- DNS lookup -->
+        <p class="panel-subtitle" style="margin-top:14px">DNS LOOKUP</p>
+        <div class="scan-row">
+          <input id="dns-host" type="text" placeholder="hostname"
+                 style="flex:1;background:var(--bg);color:var(--fg);
+                        border:1px solid var(--border);padding:6px 8px;
+                        font-family:inherit;font-size:0.85em;">
+          <button onclick="runDns()">RESOLVE</button>
+          <span id="dns-result" class="scan-status">—</span>
+        </div>
+
+      </section>
+
+      <!-- Active Recon -->
+      <section class="panel">
+        <h2 class="panel-title" style="color:#ff6b35">
+          ACTIVE RECON
+          <span style="font-size:0.72em;color:var(--dim);font-weight:normal">⚠ SENDS PACKETS</span>
+        </h2>
+
+        <div id="active-locked">
+          <div style="border:1px solid #ff6b35;padding:12px;margin-bottom:10px;
+                      font-size:0.82em;line-height:1.6;color:var(--dim)">
+            Active scans transmit packets to target systems.<br>
+            Only scan networks and systems you <strong style="color:var(--fg)">own or have
+            explicit written authorization</strong> to test.<br>
+            Unauthorized scanning may be illegal.
+          </div>
+          <button onclick="unlockActiveRecon()"
+                  style="background:transparent;border:1px solid #ff6b35;
+                         color:#ff6b35;padding:8px 16px;
+                         font-family:inherit;cursor:pointer;letter-spacing:0.08em;font-size:0.85em">
+            I UNDERSTAND — UNLOCK
+          </button>
+        </div>
+
+        <div id="active-unlocked" style="display:none">
+          <div style="font-size:0.75em;color:#ff6b35;margin-bottom:12px">
+            ⚠ ACTIVE MODE ENABLED — resets on page refresh
+          </div>
+
+          <!-- Port scan -->
+          <p class="panel-subtitle">PORT SCAN (NMAP)</p>
+          <div class="scan-row" style="flex-wrap:wrap;gap:4px">
+            <input id="scan-target" type="text" placeholder="IP or range (e.g. 10.0.0.1/24)"
+                   style="flex:1;min-width:160px;background:var(--bg);color:var(--fg);
+                          border:1px solid var(--border);padding:6px 8px;
+                          font-family:inherit;font-size:0.85em;">
+            <input id="scan-ports" type="text" placeholder="ports (blank=top 100)"
+                   style="width:140px;background:var(--bg);color:var(--fg);
+                          border:1px solid var(--border);padding:6px 8px;
+                          font-family:inherit;font-size:0.85em;">
+            <button onclick="startScan('portscan')">SCAN</button>
+            <span id="portscan-status" class="scan-status">idle</span>
+          </div>
+          <table class="recon-table" style="margin-top:6px">
+            <thead>
+              <tr><th>IP</th><th>PORT</th><th>PROTO</th><th>SERVICE</th></tr>
+            </thead>
+            <tbody id="portscan-body">
+              <tr><td colspan="4" style="color:var(--dim)">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+
       </section>
 
     </div><!-- /right col -->

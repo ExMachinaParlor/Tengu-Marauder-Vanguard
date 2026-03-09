@@ -235,6 +235,29 @@ def api_ping():
     return jsonify(scanner.ping(host))
 
 
+@app.route("/api/scan/portscan", methods=["POST"])
+def api_portscan_start():
+    data = request.get_json(silent=True) or {}
+    target = data.get("target", "").strip()
+    if not target:
+        return jsonify({"ok": False, "error": "No target specified"}), 400
+    return jsonify(scanner.start_port_scan(target=target, ports=data.get("ports", "")))
+
+
+@app.route("/api/scan/portscan")
+def api_portscan_results():
+    return jsonify({"ok": True, **scanner.portscan})
+
+
+@app.route("/api/dns", methods=["POST"])
+def api_dns():
+    data = request.get_json(silent=True) or {}
+    host = data.get("host", "").strip()
+    if not host:
+        return jsonify({"ok": False, "error": "No host specified"}), 400
+    return jsonify(scanner.dns_lookup(host))
+
+
 # ── UI ───────────────────────────────────────────────────────────────────────
 
 @app.route("/")

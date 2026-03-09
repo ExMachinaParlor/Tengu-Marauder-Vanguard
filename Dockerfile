@@ -55,6 +55,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rfkill \
     nmap \
     arp-scan \
+    iputils-ping \
+    tcpdump \
+    netdiscover \
+    dnsutils \
+    masscan \
+    tshark \
     bluez \
     gpsd-clients \
     rtl-433 \
