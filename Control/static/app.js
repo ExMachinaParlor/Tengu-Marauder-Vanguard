@@ -159,6 +159,10 @@ function loadMarauderPorts() {
       if (ps) ps.textContent = data.active && data.ports.includes(data.active)
         ? 'connected'
         : data.ports.length ? 'select port' : 'no device';
+      // Auto-connect if there's exactly one port available and it's not already active
+      if (data.ports.length === 1 && data.ports[0] !== data.active) {
+        switchMarauderPort();
+      }
     })
     .catch(() => {});
 }
