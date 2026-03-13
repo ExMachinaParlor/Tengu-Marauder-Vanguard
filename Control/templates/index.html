@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TMV Operator Console</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #000;
+      --fg:      #e8e8e8;
+      --border:  #444;
+      --accent:  #fff;
+      --dim:     #666;
+      --online:  #6fff6f;
+      --offline: #ff6060;
+      --warn:    #ffd060;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Share Tech Mono', 'Courier New', monospace;
+      font-size: 14px;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    /* Subtle CRT scanlines — CSS only, zero CPU */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(255,255,255,0.02) 3px,
+        rgba(255,255,255,0.02) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────────────── */
+    .console { max-width: 1280px; margin: 0 auto; }
+
+    header.panel {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      border: 1px solid var(--accent);
+    }
+
+    h1 { font-size: 1.2em; letter-spacing: 0.12em; }
+
+    #status-bar { font-size: 0.85em; color: var(--dim); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+    .col { display: flex; flex-direction: column; gap: 16px; }
+
+    /* ── Panels ─────────────────────────────────────────────────────────── */
+    .panel {
+      border: 1px solid var(--border);
+      padding: 14px;
+    }
+
+    .panel-title {
+      font-size: 0.85em;
+      letter-spacing: 0.1em;
+      color: var(--dim);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-subtitle {
+      font-size: 0.8em;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+      margin: 10px 0 6px;
+    }
+
+    .tag-online  { color: var(--online);  font-size: 0.8em; }
+    .tag-offline { color: var(--offline); font-size: 0.8em; }
+
+    /* ── Camera ─────────────────────────────────────────────────────────── */
+    .camera-wrap { text-align: center; }
+
+    img.camera {
+      display: block;
+      width: 100%;
+      max-width: 640px;
+      height: auto;
+      border: 1px solid var(--border);
+      margin: 0 auto;
+    }
+
+    /* ── Drive controls ─────────────────────────────────────────────────── */
+    .dpad {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .dpad-row { display: flex; gap: 6px; }
+
+    /* ── Buttons ─────────────────────────────────────────────────────────── */
+    button, .btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      font-family: inherit;
+      font-size: 0.85em;
+      letter-spacing: 0.06em;
+      padding: 8px 18px;
+      cursor: pointer;
+      transition: border-color 0.1s, color 0.1s;
+      min-width: 90px;
+      text-align: center;
+    }
+
+    button:hover { border-color: var(--accent); color: var(--accent); }
+    button:active { background: rgba(255,255,255,0.08); }
+
+    .btn-stop {
+      border-color: var(--offline);
+      color: var(--offline);
+    }
+    .btn-stop:hover {
+      background: rgba(255,96,96,0.1);
+      border-color: #ff9090;
+    }
+
+    /* ── Status line ─────────────────────────────────────────────────────── */
+    .log-line {
+      font-size: 0.8em;
+      color: var(--dim);
+      min-height: 1.4em;
+      margin-top: 6px;
+    }
+
+    /* ── Status grid ────────────────────────────────────────────────────── */
+    .status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+    }
+
+    .stat .label { font-size: 0.72em; color: var(--dim); letter-spacing: 0.1em; }
+    .stat .value { font-size: 1em; }
+
+    .val-online  { color: var(--online); }
+    .val-offline { color: var(--offline); }
+
+    /* ── Recon tables ────────────────────────────────────────────────────── */
+    .recon-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78em;
+      margin-top: 4px;
+    }
+
+    .recon-table th {
+      text-align: left;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+      padding: 4px 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .recon-table td {
+      padding: 4px 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      word-break: break-all;
+    }
+
+    .recon-table tr:last-child td { border-bottom: none; }
+
+    .scan-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+    .scan-row select { flex: 0 0 auto; min-width: 90px; max-width: 130px; padding: 6px 8px; }
+
+    .scan-status {
+      font-size: 0.75em;
+      color: var(--dim);
+      flex: 1;
+    }
+
+    .scan-status.scanning { color: var(--warn); }
+    .scan-status.done     { color: var(--online); }
+    .scan-status.error    { color: var(--offline); }
+
+    /* ── Marauder ─────────────────────────────────────────────────────────── */
+    .cmd-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      font-family: inherit;
+      font-size: 0.85em;
+      padding: 8px 10px;
+      flex: 1;
+      min-width: 160px;
+    }
+
+    select:focus { outline: none; border-color: var(--accent); }
+
+    .log-box {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      padding: 8px;
+      font-size: 0.8em;
+      line-height: 1.5;
+      height: 180px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: var(--fg);
+    }
+
+    /* Scrollbar */
+    .log-box::-webkit-scrollbar { width: 4px; }
+    .log-box::-webkit-scrollbar-track { background: transparent; }
+    .log-box::-webkit-scrollbar-thumb { background: var(--border); }
+  </style>
+</head>
+<body>
+<div class="console">
+
+  <!-- Header -->
+  <header class="panel">
+    <h1>TENGU MARAUDER VANGUARD</h1>
+    <div id="status-bar">connecting...</div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ── Left column ──────────────────────────────────────────────────── -->
+    <div class="col">
+
+      <!-- Camera -->
+      <section class="panel">
+        <h2 class="panel-title">
+          CAMERA FEED
+          <span id="cam-tag" class="tag-offline" style="display:none">[OFFLINE]</span>
+        </h2>
+        <div class="camera-wrap">
+          <img id="cam-img" src="" class="camera" width="640" height="480"
+               alt="Camera feed" style="display:none">
+          <div id="cam-offline" style="
+            display:flex; align-items:center; justify-content:center;
+            height:240px; border:1px solid var(--border);
+            color:var(--dim); font-size:0.85em; letter-spacing:0.1em;">
+            CAMERA OFFLINE
+          </div>
+        </div>
+      </section>
+
+      <!-- Drive control -->
+      <section class="panel">
+        <h2 class="panel-title">
+          DRIVE CONTROL
+          {% if motor %}
+            <span class="tag-online">[ONLINE]</span>
+          {% else %}
+            <span class="tag-offline">[OFFLINE]</span>
+          {% endif %}
+        </h2>
+
+        <div class="dpad">
+          <div class="dpad-row">
+            <button onclick="move('forward')">▲ FORWARD</button>
+          </div>
+          <div class="dpad-row">
+            <button onclick="move('left')">◄ LEFT</button>
+            <button class="btn-stop" onclick="stopMotors()">■ STOP</button>
+            <button onclick="move('right')">RIGHT ►</button>
+          </div>
+          <div class="dpad-row">
+            <button onclick="move('backward')">▼ BACK</button>
+          </div>
+        </div>
+
+        <div id="drive-status" class="log-line">—</div>
+        <div style="font-size:0.72em;color:var(--dim);margin-top:6px;text-align:center">
+          WASD / arrow keys · space to stop
+        </div>
+      </section>
+
+    </div><!-- /left col -->
+
+    <!-- ── Right column ─────────────────────────────────────────────────── -->
+    <div class="col">
+
+      <!-- System status -->
+      <section class="panel">
+        <h2 class="panel-title">SYSTEM STATUS</h2>
+        <div class="status-grid">
+          <div class="stat">
+            <span class="label">CPU</span>
+            <span id="s-cpu" class="value">—</span>
+          </div>
+          <div class="stat">
+            <span class="label">RAM</span>
+            <span id="s-ram" class="value">—</span>
+          </div>
+          <div class="stat">
+            <span class="label">DISK</span>
+            <span id="s-disk" class="value">—</span>
+          </div>
+          <div class="stat">
+            <span class="label">UPTIME</span>
+            <span id="s-uptime" class="value">—</span>
+          </div>
+          <div class="stat">
+            <span class="label">MOTORS</span>
+            <span id="s-motors" class="value">—</span>
+          </div>
+          <div class="stat">
+            <span class="label">MARAUDER</span>
+            <span id="s-marauder" class="value">—</span>
+          </div>
+          <div class="stat">
+            <span class="label">GPS</span>
+            <span id="s-gps" class="value">—</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Wireless ops -->
+      <section class="panel">
+        <h2 class="panel-title">
+          WIRELESS OPS
+          {% if marauder %}
+            <span class="tag-online">[CONNECTED]</span>
+          {% else %}
+            <span class="tag-offline">[OFFLINE]</span>
+          {% endif %}
+        </h2>
+
+        <div class="cmd-row" style="margin-bottom:6px">
+          <select id="marauder-port" title="Serial port" onchange="switchMarauderPort()">
+            <option value="">no device</option>
+          </select>
+          <span id="port-status" style="font-size:0.75em;color:var(--dim)">—</span>
+        </div>
+
+        <div class="cmd-row">
+          <select id="marauder-cmd">
+            <optgroup label="── WiFi SCAN ──">
+              <option value="scanap">SCAN APs</option>
+              <option value="scansta">SCAN STATIONS</option>
+              <option value="scanprobe">SCAN PROBES</option>
+              <option value="stopscan">STOP SCAN</option>
+            </optgroup>
+            <optgroup label="── SNIFF ──">
+              <option value="sniffbeacon">SNIFF BEACONS</option>
+              <option value="sniffdeauth">SNIFF DEAUTH</option>
+              <option value="sniffprobe">SNIFF PROBES</option>
+              <option value="sniffraw">SNIFF RAW</option>
+            </optgroup>
+            <optgroup label="── TARGET ──">
+              <option value="select -a">SELECT AP  (args: index)</option>
+            </optgroup>
+            <optgroup label="── ATTACK ──">
+              <option value="attack -t deauth">DEAUTH ATTACK</option>
+              <option value="attack -t beacon">BEACON SPAM</option>
+              <option value="attack -t probe">PROBE SPAM</option>
+              <option value="attack -s">STOP ATTACK</option>
+            </optgroup>
+            <optgroup label="── BLUETOOTH ──">
+              <option value="blescan">BLE SCAN</option>
+              <option value="blejam">BLE JAM</option>
+              <option value="blebeacon">BLE BEACON</option>
+            </optgroup>
+            <optgroup label="── EVIL PORTAL ──">
+              <option value="evilportal start">EVIL PORTAL START</option>
+              <option value="evilportal stop">EVIL PORTAL STOP</option>
+            </optgroup>
+            <optgroup label="── CAPTURE ──">
+              <option value="capture">START CAPTURE</option>
+              <option value="stopcap">STOP CAPTURE</option>
+              <option value="savecap">SAVE CAPTURE</option>
+              <option value="handshake">HANDSHAKE CAPTURE</option>
+            </optgroup>
+            <optgroup label="── MANAGE ──">
+              <option value="list">LIST</option>
+              <option value="clearap">CLEAR APs</option>
+              <option value="clearsta">CLEAR STATIONS</option>
+              <option value="ls">LIST FILES</option>
+              <option value="setchannel">SET CHANNEL</option>
+            </optgroup>
+            <optgroup label="── SYSTEM ──">
+              <option value="info">INFO</option>
+              <option value="help">HELP</option>
+              <option value="settings">SETTINGS</option>
+              <option value="heap">HEAP</option>
+              <option value="tasks">TASKS</option>
+              <option value="reboot">REBOOT DEVICE</option>
+            </optgroup>
+          </select>
+          <input id="marauder-args" type="text" placeholder="args"
+                 style="width:70px;background:var(--bg);color:var(--fg);
+                        border:1px solid var(--border);padding:6px 8px;
+                        font-family:inherit;font-size:0.85em;"
+                 title="Optional arguments (e.g. AP index for 'select -a', channel for 'setchannel')">
+          <button onclick="sendMarauder()">SEND</button>
+        </div>
+
+        <div id="cmd-result" class="log-line">—</div>
+
+        <p class="panel-subtitle">CONSOLE OUTPUT</p>
+        <pre id="marauder-log" class="log-box"></pre>
+      </section>
+
+      <!-- Recon -->
+      <section class="panel">
+        <h2 class="panel-title">RECON</h2>
+
+        <!-- Wireless interfaces -->
+        <p class="panel-subtitle">WIRELESS INTERFACES</p>
+        <div id="iface-wrap">
+          <table class="recon-table">
+            <thead>
+              <tr><th>IFACE</th><th>TYPE</th><th>SSID</th><th>CH</th><th>ADDR</th></tr>
+            </thead>
+            <tbody id="iface-body">
+              <tr><td colspan="5" style="color:var(--dim)">loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- WiFi AP scan -->
+        <p class="panel-subtitle" style="margin-top:14px">WIFI ACCESS POINTS</p>
+        <div class="scan-row">
+          <select id="wifi-iface-select" title="Wireless interface">
+            <option value="wlan0">wlan0</option>
+          </select>
+          <button onclick="startScan('wifi')">SCAN APs</button>
+          <span id="wifi-status" class="scan-status">idle</span>
+        </div>
+        <table class="recon-table">
+          <thead>
+            <tr><th>SSID</th><th>BSSID</th><th>CH</th><th>SIGNAL</th><th>ENC</th></tr>
+          </thead>
+          <tbody id="wifi-body">
+            <tr><td colspan="5" style="color:var(--dim)">—</td></tr>
+          </tbody>
+        </table>
+
+        <!-- Ping test -->
+        <p class="panel-subtitle" style="margin-top:14px">PING TEST</p>
+        <div class="scan-row">
+          <input id="ping-host" type="text" placeholder="host or IP"
+                 style="flex:1;background:var(--bg);color:var(--fg);
+                        border:1px solid var(--border);padding:6px 8px;
+                        font-family:inherit;font-size:0.85em;">
+          <button onclick="runPing()">PING</button>
+          <span id="ping-status" class="scan-status">—</span>
+        </div>
+
+        <!-- Network scan -->
+        <p class="panel-subtitle" style="margin-top:14px">NETWORK HOSTS</p>
+        <div class="scan-row">
+          <select id="net-iface-select" title="Network interface">
+            <option value="">auto</option>
+          </select>
+          <button onclick="startScan('network')">SCAN LAN</button>
+          <span id="network-status" class="scan-status">idle</span>
+        </div>
+        <table class="recon-table">
+          <thead>
+            <tr><th>IP</th><th>MAC</th><th>VENDOR</th></tr>
+          </thead>
+          <tbody id="network-body">
+            <tr><td colspan="3" style="color:var(--dim)">—</td></tr>
+          </tbody>
+        </table>
+
+        <!-- Bluetooth scan -->
+        <p class="panel-subtitle" style="margin-top:14px">BLUETOOTH DEVICES</p>
+        <div class="scan-row">
+          <select id="bt-adapter-select" title="Bluetooth adapter">
+            <option value="hci0">hci0</option>
+          </select>
+          <button onclick="startScan('bluetooth')">SCAN BT</button>
+          <span id="bluetooth-status" class="scan-status">idle</span>
+        </div>
+        <table class="recon-table">
+          <thead>
+            <tr><th>MAC</th><th>NAME</th></tr>
+          </thead>
+          <tbody id="bluetooth-body">
+            <tr><td colspan="2" style="color:var(--dim)">—</td></tr>
+          </tbody>
+        </table>
+
+        <!-- RF scan -->
+        <p class="panel-subtitle" style="margin-top:14px">RF SIGNALS (RTL-SDR)</p>
+        <div class="scan-row">
+          <button onclick="startScan('rf')">SCAN RF <span style="font-size:0.8em;color:var(--dim)">(10s)</span></button>
+          <span id="rf-status" class="scan-status">idle</span>
+        </div>
+        <pre id="rf-results" class="log-box" style="height:120px">—</pre>
+
+        <!-- DNS lookup -->
+        <p class="panel-subtitle" style="margin-top:14px">DNS LOOKUP</p>
+        <div class="scan-row">
+          <input id="dns-host" type="text" placeholder="hostname"
+                 style="flex:1;background:var(--bg);color:var(--fg);
+                        border:1px solid var(--border);padding:6px 8px;
+                        font-family:inherit;font-size:0.85em;">
+          <button onclick="runDns()">RESOLVE</button>
+          <span id="dns-result" class="scan-status">—</span>
+        </div>
+
+      </section>
+
+      <!-- Active Recon -->
+      <section class="panel">
+        <h2 class="panel-title" style="color:#ff6b35">
+          ACTIVE RECON
+          <span style="font-size:0.72em;color:var(--dim);font-weight:normal">⚠ SENDS PACKETS</span>
+        </h2>
+
+        <div id="active-locked">
+          <div style="border:1px solid #ff6b35;padding:12px;margin-bottom:10px;
+                      font-size:0.82em;line-height:1.6;color:var(--dim)">
+            Active scans transmit packets to target systems.<br>
+            Only scan networks and systems you <strong style="color:var(--fg)">own or have
+            explicit written authorization</strong> to test.<br>
+            Unauthorized scanning may be illegal.
+          </div>
+          <button onclick="unlockActiveRecon()"
+                  style="background:transparent;border:1px solid #ff6b35;
+                         color:#ff6b35;padding:8px 16px;
+                         font-family:inherit;cursor:pointer;letter-spacing:0.08em;font-size:0.85em">
+            I UNDERSTAND — UNLOCK
+          </button>
+        </div>
+
+        <div id="active-unlocked" style="display:none">
+          <div style="font-size:0.75em;color:#ff6b35;margin-bottom:12px">
+            ⚠ ACTIVE MODE ENABLED — resets on page refresh
+          </div>
+
+          <!-- Port scan -->
+          <p class="panel-subtitle">PORT SCAN (NMAP)</p>
+          <div class="scan-row" style="flex-wrap:wrap;gap:4px;align-items:center">
+            <span style="font-size:0.85em;color:var(--dim)">nmap</span>
+            <input id="scan-target" type="text" placeholder="target (IP, range, CIDR)"
+                   style="flex:1;min-width:140px;background:var(--bg);color:var(--fg);
+                          border:1px solid var(--border);padding:6px 8px;
+                          font-family:inherit;font-size:0.85em;">
+            <input id="scan-flags" type="text" placeholder="flags (e.g. -sV -p 22,80,443)"
+                   style="flex:1;min-width:160px;background:var(--bg);color:var(--fg);
+                          border:1px solid var(--border);padding:6px 8px;
+                          font-family:inherit;font-size:0.85em;">
+            <button onclick="startScan('portscan')">SCAN</button>
+            <span id="portscan-status" class="scan-status">idle</span>
+          </div>
+          <pre id="portscan-output"
+               style="margin-top:6px;padding:8px;background:var(--bg);
+                      border:1px solid var(--border);color:var(--fg);
+                      font-size:0.8em;max-height:320px;overflow-y:auto;
+                      white-space:pre-wrap;word-break:break-all">—</pre>
+        </div>
+
+      </section>
+
+    </div><!-- /right col -->
+
+  </div><!-- /grid -->
+</div><!-- /console -->
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

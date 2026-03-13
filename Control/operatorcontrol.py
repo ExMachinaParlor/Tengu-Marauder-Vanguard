@@ -1,232 +1,275 @@
-from flask import Flask, render_template_string, request, redirect, Response, url_for
+"""
+Tengu Marauder Vanguard — Operator Control
+
+Flask application entry point. All hardware access goes through services;
+this file contains only routing and HTTP concerns.
+"""
+
+import glob
+import logging
+
 import cv2
-import serial
-import serial.tools.list_ports
-import threading
-import os
-import cv2
+from flask import Flask, Response, jsonify, render_template, request
 
-def start_camera():
-    cap = cv2.VideoCapture(0)  # Use 0 for the first USB camera
+from services.drive import DriveService
+from services.marauder import MarauderService
+from services.scanner import ScannerService
+from services.status import get_status
 
-    if not cap.isOpened():
-        print("Cannot open camera")
-        return
-
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            print("Can't receive frame (stream end?). Exiting ...")
-            break
-
-        cv2.imshow('Camera Feed', frame)
-
-        if cv2.waitKey(1) == ord('q'):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
-
-
-try:
-    from robot_hat import Motor, PWM, Pin
-    MOTOR_AVAILABLE = True
-except ImportError:
-    MOTOR_AVAILABLE = False
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+log = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Stylesheet for Terminal Look :3
-RETRO_STYLE_CSS = """
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Share Tech Mono', 'Courier New', monospace;
-      background: #000; color: white; margin: 0; padding: 20px;
-      min-height: 100vh; position: relative; overflow-x: hidden;
-      animation: flicker 0.15s infinite linear, crt-glow 4s ease-in-out infinite alternate;
-    }
-    body::before {
-      content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.04) 2px, rgba(255, 255, 255, 0.04) 4px);
-      pointer-events: none; z-index: 1000;
-    }
-    body::after {
-      content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: radial-gradient(ellipse at center, transparent 0%, transparent 70%, rgba(0,0,0,0.4) 100%);
-      pointer-events: none; z-index: 999; box-shadow: inset 0 0 100px rgba(0,0,0,0.8);
-    }
-    @keyframes flicker { 0% { opacity: 1; } 97% { opacity: 1; } 98% { opacity: 0.97; } 99% { opacity: 0.99; } 100% { opacity: 1; } }
-    @keyframes crt-glow { 0% { text-shadow: 0 0 3px rgba(255,255,255,0.7); } 50% { text-shadow: 0 0 5px rgba(255,255,255,0.8); } 100% { text-shadow: 0 0 3px rgba(255,255,255,0.7); } }
-    .terminal-section { border: 1px solid white; padding: 15px; margin-bottom: 20px; background: rgba(0, 0, 0, 0.8); box-shadow: 0 0 10px rgba(255, 255, 255, 0.2), inset 0 0 10px rgba(255, 255, 255, 0.05); }
-    .section-title { font-size: 1.2em; margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid white; padding-bottom: 5px; text-shadow: 0 0 5px rgba(255,255,255,0.5); }
-    .video-feed { border: 1px solid white; box-shadow: 0 0 20px rgba(255, 255, 255, 0.4); display: block; max-width: 100%; height: auto; }
-    input, button, select, .button { background: #000; border: 1px solid white; color: white; padding: 10px 15px; margin: 5px; font-family: 'Share Tech Mono', monospace; font-size: 1em; text-decoration: none; display: inline-block; }
-    input:focus, button:focus, select:focus { outline: none; box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
-    button, .button { cursor: pointer; transition: all 0.2s; text-transform: uppercase; text-align: center; }
-    button:hover, .button:hover { background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 15px rgba(255, 255, 255, 0.4); }
-    .button-group a { margin: 5px; }
-    pre { background: rgba(255, 255, 255, 0.05); border: 1px solid white; padding: 10px; margin-top: 10px; white-space: pre-wrap; word-wrap: break-word; min-height: 50px; }
-    label { display: block; margin: 10px 5px 5px; }
-</style>
-"""
+# ── Service singletons (initialised once at startup) ─────────────────────────
+drive = DriveService()
+marauder = MarauderService()
+scanner = ScannerService()
 
-# ==========================
-# Camera Feed
-# ==========================
-def gen_frames():
-    cap = cv2.VideoCapture(0)
 
-    if not cap.isOpened():
-        yield (b'--frame\r\n'
-               b'Content-Type: text/plain\r\n\r\nCamera not accessible\r\n')
+# ── Camera ───────────────────────────────────────────────────────────────────
+
+def _find_camera_index() -> int | None:
+    """Return the index of the first V4L2 camera that can actually produce frames."""
+    for idx in range(4):
+        cap = cv2.VideoCapture(idx)
+        if cap.isOpened():
+            ok, _ = cap.read()
+            cap.release()
+            if ok:
+                log.info("Camera found at index %d", idx)
+                return idx
+        else:
+            cap.release()
+    return None
+
+
+def _gen_frames():
+    import time
+    idx = _find_camera_index()
+    if idx is None:
         return
-
+    cap = cv2.VideoCapture(idx)
+    if not cap.isOpened():
+        return
+    # Discard warm-up frames so the first delivered frame isn't black
+    for _ in range(10):
+        cap.read()
     try:
         while True:
-            success, frame = cap.read()
-            if not success:
-                break
-            _, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-    except Exception as e:
-        yield (b'--frame\r\n'
-               b'Content-Type: text/plain\r\n\r\nCamera error: ' + str(e).encode() + b'\r\n')
+            ok, frame = cap.read()
+            if not ok:
+                time.sleep(0.05)
+                continue
+            _, buf = cv2.imencode(".jpg", frame)
+            yield (
+                b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"
+                + buf.tobytes()
+                + b"\r\n"
+            )
+    except Exception as exc:
+        log.error("Camera error: %s", exc)
     finally:
         cap.release()
 
-@app.route('/video_feed')
+
+@app.route("/api/camera/status")
+def api_camera_status():
+    # Check device existence without opening — avoids conflict with active stream
+    available = bool(glob.glob("/dev/video*"))
+    return jsonify({"ok": True, "available": available})
+
+
+@app.route("/video_feed")
 def video_feed():
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(
+        _gen_frames(),
+        mimetype="multipart/x-mixed-replace; boundary=frame",
+    )
 
 
-# ==========================
-# Serial Port
-# ==========================
-@app.route('/serial', methods=['GET', 'POST'])
-def serial_terminal():
-    output = ""
-    if request.method == 'POST':
-        port = request.form['port']
-        baud = int(request.form['baudrate'])
-        try:
-            with serial.Serial(port, baud, timeout=1) as ser:
-                ser.write(b'Test\r\n')
-                output = ser.readline().decode(errors='ignore')
-        except Exception as e:
-            output = f"[!] Error: {str(e)}"
-    ports = serial.tools.list_ports.comports()
-    return render_template_string("""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Serial Terminal</title>
-            {{ styles|safe }}
-        </head>
-        <body>
-            <div class="terminal-section">
-                <h2 class="section-title">Serial Terminal</h2>
-                <form method='POST'>
-                    <label>Port:</label>
-                    <select name='port'>
-                    {% for p in ports %}
-                        <option value='{{ p.device }}'>{{ p.device }} - {{ p.description }}</option>
-                    {% endfor %}
-                    </select>
-                    <label>Baudrate:</label>
-                    <input type='text' name='baudrate' value='115200'>
-                    <button type='submit'>Connect</button>
-                    <a href='/' class="button">Back</a>
-                </form>
-                <h3 class="section-title" style="margin-top: 20px;">Output</h3>
-                <pre>{{ output or "Awaiting connection..." }}</pre>
-            </div>
-        </body>
-        </html>
-    """, ports=ports, output=output, styles=RETRO_STYLE_CSS)
+# ── Drive API ────────────────────────────────────────────────────────────────
 
-# ==========================
-# Motor Control
-# ==========================
-if MOTOR_AVAILABLE:
-    motor_right = Motor(PWM('P12'), Pin('D4'))
-    motor_left = Motor(PWM('P13'), Pin('D5'))
+@app.route("/api/move", methods=["POST"])
+def api_move():
+    data = request.get_json(silent=True) or {}
+    direction = data.get("direction", "").lower()
 
-    def move(forward=True):
-        motor_right.speed(50 if forward else -50)
-        motor_left.speed(-50 if forward else 50)
+    dispatch = {
+        "forward":  lambda: drive.move(forward=True),
+        "backward": lambda: drive.move(forward=False),
+        "right":    lambda: drive.turn(right=True),
+        "left":     lambda: drive.turn(right=False),
+        "stop":     drive.stop,
+    }
 
-    def turn(right=True):
-        motor_right.speed(-50 if right else 50)
-        motor_left.speed(-50 if right else 50)
+    action = dispatch.get(direction)
+    if action is None:
+        return jsonify({"ok": False, "error": f"Unknown direction: {direction!r}"}), 400
 
-    def stop():
-        motor_right.speed(0)
-        motor_left.speed(0)
+    action()
+    return jsonify({"ok": True, "direction": direction})
 
-@app.route('/motor/<action>')
-def motor_control(action):
-    if not MOTOR_AVAILABLE:
-        return "Motor control unavailable"
-    if action == 'forward': move(True)
-    elif action == 'backward': move(False)
-    elif action == 'left': turn(False)
-    elif action == 'right': turn(True)
-    elif action == 'stop': stop()
-    return redirect(url_for('index'))
 
-# ==========================
-# Home Page
-# ==========================
-@app.route('/')
+@app.route("/api/stop", methods=["POST"])
+def api_stop():
+    drive.stop()
+    return jsonify({"ok": True})
+
+
+# ── Marauder API ─────────────────────────────────────────────────────────────
+
+@app.route("/api/marauder", methods=["POST"])
+def api_marauder():
+    data = request.get_json(silent=True) or {}
+    command = data.get("command", "").strip()
+    if not command:
+        return jsonify({"ok": False, "error": "No command provided"}), 400
+    return jsonify(marauder.send_command(command))
+
+
+@app.route("/api/marauder/logs")
+def api_marauder_logs():
+    return jsonify({"ok": True, "logs": marauder.logs()})
+
+
+@app.route("/api/marauder/ports")
+def api_marauder_ports():
+    return jsonify({"ok": True, "ports": marauder.list_ports(), "active": marauder.port})
+
+
+@app.route("/api/marauder/port", methods=["POST"])
+def api_marauder_port():
+    data = request.get_json(silent=True) or {}
+    port = data.get("port", "").strip()
+    if not port:
+        return jsonify({"ok": False, "error": "No port specified"}), 400
+    return jsonify(marauder.reconnect(port))
+
+
+# ── Status API ───────────────────────────────────────────────────────────────
+
+@app.route("/api/status")
+def api_status():
+    status = get_status(drive_service=drive, marauder_service=marauder)
+    gps = scanner.gps_fix()
+    status["gps"] = (
+        f"{gps['lat']:.5f}, {gps['lon']:.5f}" if gps else "offline"
+    )
+    return jsonify(status)
+
+
+# ── Recon API ────────────────────────────────────────────────────────────────
+
+@app.route("/api/wireless/interfaces")
+def api_wireless_interfaces():
+    return jsonify({
+        "ok": True,
+        "interfaces": scanner.wireless_interfaces(),
+        "rfkill": scanner.rfkill_status(),
+    })
+
+
+@app.route("/api/interfaces/network")
+def api_network_interfaces():
+    return jsonify({"ok": True, "interfaces": scanner.list_network_interfaces()})
+
+
+@app.route("/api/bluetooth/adapters")
+def api_bt_adapters():
+    return jsonify({"ok": True, "adapters": scanner.list_bt_adapters()})
+
+
+@app.route("/api/scan/network", methods=["POST"])
+def api_scan_network_start():
+    data = request.get_json(silent=True) or {}
+    return jsonify(scanner.start_network_scan(interface=data.get("interface", "")))
+
+
+@app.route("/api/scan/network")
+def api_scan_network_results():
+    return jsonify({"ok": True, **scanner.network})
+
+
+@app.route("/api/scan/bluetooth", methods=["POST"])
+def api_scan_bluetooth_start():
+    data = request.get_json(silent=True) or {}
+    return jsonify(scanner.start_bluetooth_scan(adapter=data.get("adapter", "hci0")))
+
+
+@app.route("/api/scan/bluetooth")
+def api_scan_bluetooth_results():
+    return jsonify({"ok": True, **scanner.bluetooth})
+
+
+@app.route("/api/scan/rf", methods=["POST"])
+def api_scan_rf_start():
+    return jsonify(scanner.start_rf_scan())
+
+
+@app.route("/api/scan/rf")
+def api_scan_rf_results():
+    return jsonify({"ok": True, **scanner.rf})
+
+
+@app.route("/api/scan/wifi", methods=["POST"])
+def api_scan_wifi_start():
+    data = request.get_json(silent=True) or {}
+    return jsonify(scanner.start_wifi_scan(interface=data.get("interface", "wlan0")))
+
+
+@app.route("/api/scan/wifi")
+def api_scan_wifi_results():
+    return jsonify({"ok": True, **scanner.wifi})
+
+
+@app.route("/api/ping", methods=["POST"])
+def api_ping():
+    data = request.get_json(silent=True) or {}
+    host = data.get("host", "").strip()
+    if not host:
+        return jsonify({"ok": False, "error": "No host specified"}), 400
+    return jsonify(scanner.ping(host))
+
+
+@app.route("/api/scan/portscan", methods=["POST"])
+def api_portscan_start():
+    data = request.get_json(silent=True) or {}
+    target = data.get("target", "").strip()
+    if not target:
+        return jsonify({"ok": False, "error": "No target specified"}), 400
+    return jsonify(scanner.start_port_scan(target=target, flags=data.get("flags", "")))
+
+
+@app.route("/api/scan/portscan")
+def api_portscan_results():
+    return jsonify({"ok": True, **scanner.portscan})
+
+
+@app.route("/api/dns", methods=["POST"])
+def api_dns():
+    data = request.get_json(silent=True) or {}
+    host = data.get("host", "").strip()
+    if not host:
+        return jsonify({"ok": False, "error": "No host specified"}), 400
+    return jsonify(scanner.dns_lookup(host))
+
+
+# ── UI ───────────────────────────────────────────────────────────────────────
+
+@app.route("/")
 def index():
-    return render_template_string("""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Tengu Vanguard Operator Control</title>
-            {{ styles|safe }}
-        </head>
-        <body>
-            <div class="terminal-section">
-                <h1 class="section-title">Tengu Vanguard Operator Control</h1>
-            </div>
+    return render_template(
+        "index.html",
+        motor=drive.available,
+        marauder=marauder.connected,
+    )
 
-            <div class="terminal-section">
-                <h3 class="section-title">Camera Feed</h3>
-                <img src="{{ url_for('video_feed') }}" class="video-feed" width="640" height="480">
-            </div>
 
-            <div class="terminal-section">
-                <h3 class="section-title">Motor Control</h3>
-                {% if motor %}
-                    <div class="button-group">
-                        <a href='/motor/forward' class="button">Forward</a>
-                        <a href='/motor/backward' class="button">Backward</a>
-                        <a href='/motor/left' class="button">Left</a>
-                        <a href='/motor/right' class="button">Right</a>
-                        <a href='/motor/stop' class="button">Stop</a>
-                    </div>
-                {% else %}
-                    <p>[!] Motor Hat not detected.</p>
-                {% endif %}
-            </div>
+# ── Entry point ──────────────────────────────────────────────────────────────
 
-            <div class="terminal-section">
-                <h3 class="section-title">System Tools</h3>
-                <a href='/serial' class="button">Open Serial Terminal</a>
-            </div>
-        </body>
-        </html>
-    """, motor=MOTOR_AVAILABLE, styles=RETRO_STYLE_CSS)
-
-# ==========================
-# Run App
-# ==========================
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
-# This will run the Flask app on all interfaces at port 5000
-# Make sure to run this script with appropriate permissions to access the camera and serial ports.
+    app.run(host="0.0.0.0", port=5000)

@@ -1,0 +1,89 @@
+name: tengu-marauder-vanguard
+
+services:
+  tmv:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: exmachinaparlor/tengu-marauder-vanguard:local
+    container_name: tengu-marauder-vanguard
+    init: true
+    restart: unless-stopped
+
+    # host network mode gives the container direct access to the Pi's physical
+    # network interfaces — required for arp-scan, iw (wireless), and Bluetooth
+    # AF_BLUETOOTH sockets to work against the real LAN, not the Docker bridge.
+    # Port 5000 is exposed directly on the host (no port mapping needed).
+    network_mode: host
+
+    environment:
+      FLASK_ENV: production
+      PYTHONUNBUFFERED: "1"
+
+    # Run as root so all hardware devices (I2C, GPIO, serial, BT) are accessible
+    # without per-group permission tuning. Acceptable on a dedicated security Pi.
+    # To revert to non-root, change to: user: "10001:10001"
+    user: "0:0"
+
+    # Device mappings are injected at runtime by tmv-start.sh, which checks
+    # which devices are actually present before starting the container.
+    # Running `docker compose up` directly works but maps no hardware.
+    # Use ./tmv-start.sh for full hardware access.
+
+    # Add host device groups so the non-root user can access hardware.
+    # Find correct GIDs on the Pi with: getent group video dialout i2c gpio bluetooth
+    # Override via a .env file if your host differs from these defaults.
+    group_add:
+      - "${VIDEO_GID:-44}"        # video group (camera)
+      - "${DIALOUT_GID:-20}"      # dialout group (serial / ESP32)
+      - "${I2C_GID:-998}"         # i2c group (motor hat — PCA9685 PWM over I2C)
+      - "${GPIO_GID:-997}"        # gpio group (motor direction pins via gpiomem)
+      - "${BLUETOOTH_GID:-105}"   # bluetooth group (BT scanning — all /dev/hci* adapters)
+
+    # NET_ADMIN — required for iw (wireless interface info), rfkill, bluetoothctl
+    # NET_RAW   — required for nmap and arp-scan (raw socket operations)
+    # All other capabilities remain dropped.
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
+    security_opt:
+      - no-new-privileges:true
+
+    # Read-only root filesystem; writable paths are explicit below
+    read_only: true
+
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+      - /run:size=16m,noexec,nosuid,nodev
+
+    volumes:
+      - type: bind
+        source: ./data
+        target: /app/data
+      - type: bind
+        source: /etc/localtime
+        target: /etc/localtime
+        read_only: true
+      # robot_hat reads /proc/device-tree to detect Raspberry Pi hardware.
+      # /proc/device-tree is a symlink to /sys/firmware/devicetree/base on Pi;
+      # sysfs sub-paths can be bind-mounted into containers, procfs paths cannot.
+      - type: bind
+        source: /sys/firmware/devicetree/base
+        target: /proc/device-tree
+        read_only: true
+
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/', timeout=3)"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+    stop_grace_period: 15s

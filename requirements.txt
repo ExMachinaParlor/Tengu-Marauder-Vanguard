@@ -1,9 +1,12 @@
-smbus2
-RPi.GPIO
-numpy
-flask
-opencv-python
-pyserial
-Adafruit-Blinka
-requests
-serial
+Adafruit-Blinka==8.53.0
+psutil==6.1.0
+Flask==3.1.0
+numpy==2.2.3
+# headless variant — no GUI/display dependency; works for MJPEG streaming
+opencv-python-headless==4.10.0.84
+pyserial==3.5
+requests==2.32.3
+RPi.GPIO==0.7.1
+smbus2==0.5.0
+gpiozero
+lgpio
