@@ -138,20 +138,35 @@ curl http://pi:5000/api/scan/rf
 
 ## Architecture
 
-```
-Browser / curl / Python
-        │
-        ▼
-  Flask API (port 5000)
-        │
-   ┌────┼────────────┬────────────┐
-   ▼    ▼            ▼            ▼
-Drive  Marauder   Scanner     Status
-  │      │           │           │
-  ▼      ▼           ▼           ▼
-Motors  ESP32     iw/nmap/    psutil
-(HAT)  Serial    arp-scan    /gpsd
-                 bluez/rtl
+```mermaid
+graph TD
+    Client["Browser / curl / Python"]
+    Flask["Flask API  :5000\noperatorcontrol.py"]
+
+    subgraph Services ["Control/services/"]
+        Drive["DriveService\ndrive.py"]
+        Marauder["MarauderService\nmarauder.py"]
+        Scanner["ScannerService\nscanner.py"]
+        Status["StatusService\nstatus.py"]
+    end
+
+    subgraph Hardware ["Hardware / OS"]
+        Motors["DC Motors\nRobot HAT  i²c/PWM"]
+        ESP32["ESP32 Marauder\nSerial  /dev/ttyACM0"]
+        Recon["iw · nmap · arp-scan\nbluez · rtl_433 · gpsd"]
+        Sys["psutil · /proc · /sys"]
+    end
+
+    Client --> Flask
+    Flask --> Drive
+    Flask --> Marauder
+    Flask --> Scanner
+    Flask --> Status
+
+    Drive    --> Motors
+    Marauder --> ESP32
+    Scanner  --> Recon
+    Status   --> Sys
 ```
 
 Hardware is only accessed through service modules in `Control/services/`. The Flask layer contains only routes.
