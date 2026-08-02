@@ -12,7 +12,10 @@ import threading
 
 import serial
 
-from utils.ringbuffer import RingBuffer
+try:
+    from ..utils.ringbuffer import RingBuffer
+except ImportError:  # pragma: no cover - script execution fallback
+    from utils.ringbuffer import RingBuffer
 
 log = logging.getLogger(__name__)
 

@@ -18,7 +18,10 @@ the physical inversion produces opposite wheel directions (tank turn).
 import logging
 import threading
 
-from hardware.robot_hat_bridge import AVAILABLE, Motor, PWM, Pin
+try:
+    from ..hardware.robot_hat_bridge import AVAILABLE, Motor, PWM, Pin
+except ImportError:  # pragma: no cover - script execution fallback
+    from hardware.robot_hat_bridge import AVAILABLE, Motor, PWM, Pin
 
 log = logging.getLogger(__name__)
 

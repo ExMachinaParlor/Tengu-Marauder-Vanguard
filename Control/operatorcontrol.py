@@ -7,14 +7,21 @@ this file contains only routing and HTTP concerns.
 
 import glob
 import logging
+import os
 
 import cv2
 from flask import Flask, Response, jsonify, render_template, request
 
-from services.drive import DriveService
-from services.marauder import MarauderService
-from services.scanner import ScannerService
-from services.status import get_status
+try:
+    from .services.drive import DriveService
+    from .services.marauder import MarauderService
+    from .services.scanner import ScannerService
+    from .services.status import get_status
+except ImportError:  # pragma: no cover - script execution fallback
+    from services.drive import DriveService
+    from services.marauder import MarauderService
+    from services.scanner import ScannerService
+    from services.status import get_status
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,6 +30,40 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("FLASK_ENV", "").lower() == "production",
+)
+
+API_TOKEN = os.environ.get("TMV_API_TOKEN", "").strip()
+
+
+@app.before_request
+def _enforce_api_auth():
+    """Protect sensitive endpoints when a deployment token is configured."""
+    if not API_TOKEN:
+        return None
+
+    if request.path.startswith("/api/") or request.path == "/video_feed":
+        provided = request.headers.get("X-API-Key", "").strip()
+        if not provided:
+            auth_header = request.headers.get("Authorization", "").strip()
+            if auth_header.lower().startswith("bearer "):
+                provided = auth_header[7:].strip()
+        if provided != API_TOKEN:
+            return jsonify({"ok": False, "error": "Unauthorized"}), 401
+    return None
+
+
+@app.after_request
+def _add_security_headers(response):
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    return response
+
 
 # ── Service singletons (initialised once at startup) ─────────────────────────
 drive = DriveService()

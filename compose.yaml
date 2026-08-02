@@ -19,11 +19,15 @@ services:
     environment:
       FLASK_ENV: production
       PYTHONUNBUFFERED: "1"
+      TMV_API_TOKEN: "${TMV_API_TOKEN:-}"
+      SESSION_COOKIE_SECURE: "true"
+      SESSION_COOKIE_HTTPONLY: "true"
+      SESSION_COOKIE_SAMESITE: "Lax"
 
-    # Run as root so all hardware devices (I2C, GPIO, serial, BT) are accessible
-    # without per-group permission tuning. Acceptable on a dedicated security Pi.
-    # To revert to non-root, change to: user: "10001:10001"
-    user: "0:0"
+    # Prefer the application user and use host group membership for hardware access.
+    # This keeps the container from running as root while still allowing access to
+    # GPIO/I2C/serial/Bluetooth via the configured group_add entries.
+    user: "${APP_UID:-10001}:${APP_GID:-10001}"
 
     # Device mappings are injected at runtime by tmv-start.sh, which checks
     # which devices are actually present before starting the container.
